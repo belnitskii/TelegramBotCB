@@ -11,8 +11,6 @@ public class Valuta {
     private String charCode;
     @JsonProperty("Name")
     private String name;
-    @JsonProperty("Valuta")
+    @JsonProperty("Value")
     private Double value;
-
-
 }

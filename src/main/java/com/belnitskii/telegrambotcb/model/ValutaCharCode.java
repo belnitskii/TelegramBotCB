@@ -1,6 +1,6 @@
 package com.belnitskii.telegrambotcb.model;
 
-public enum ValutCharCode {
+public enum ValutaCharCode {
     AUD,
     AZN,
     GBP,
@@ -44,4 +44,4 @@ public enum ValutCharCode {
     ZAR,
     KRW,
     JPY
-    }
+}
