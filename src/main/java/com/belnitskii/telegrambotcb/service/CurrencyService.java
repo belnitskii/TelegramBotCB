@@ -1,10 +1,13 @@
 package com.belnitskii.telegrambotcb.service;
 
+import com.belnitskii.telegrambotcb.config.ApiUrls;
 import com.belnitskii.telegrambotcb.model.Valuta;
 import com.belnitskii.telegrambotcb.util.DateTimeUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.expression.ParseException;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,10 +15,11 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.Scanner;
 
+@Service
 public class CurrencyService {
 
     public static String getCurrencyRate(String message) throws IOException, ParseException, IOException {
-        URL url = new URL("https://www.cbr-xml-daily.ru/daily_json.js");
+        URL url = new URL(ApiUrls.CURRENCY_RATES_URL);
         Scanner scanner = new Scanner((InputStream) url.getContent());
         String result = "";
         while (scanner.hasNext()){
@@ -29,6 +33,6 @@ public class CurrencyService {
         Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
         JsonNode dateTimeNode = rootNode.path("Date");
         LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
-        return "Курс " + valuta.getName() + " " +  valuta.getValue() + " дата обновления " + dateUpdated;
+        return "Курс " + valuta.getName() + " " +  valuta.getValue() + "\n" + "Дата обновления " + dateUpdated;
     }
 }

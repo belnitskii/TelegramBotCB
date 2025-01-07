@@ -1,6 +1,6 @@
 package com.belnitskii.telegrambotcb.config;
 
-import com.belnitskii.telegrambotcb.TelegramBot;
+import com.belnitskii.telegrambotcb.bot.TelegramBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
@@ -12,6 +12,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Component
 public class BotInitializer {
     private final TelegramBot telegramBot;
+
     @Autowired
     public BotInitializer(TelegramBot telegramBot) {
         this.telegramBot = telegramBot;
