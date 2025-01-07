@@ -1,4 +1,4 @@
-package com.belnitskii.telegrambotcb.model;
+package com.belnitskii.telegrambotcb.constant;
 
 public enum ValutaCharCode {
     AUD,

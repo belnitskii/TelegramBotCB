@@ -1,5 +1,6 @@
 package com.belnitskii.telegrambotcb.service;
 
+import com.belnitskii.telegrambotcb.config.ApiUrls;
 import com.belnitskii.telegrambotcb.model.Valuta;
 import com.belnitskii.telegrambotcb.util.DateTimeUtil;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,7 +16,7 @@ import java.util.Scanner;
 public class CurrencyService {
 
     public static String getCurrencyRate(String message) throws IOException, ParseException, IOException {
-        URL url = new URL("https://www.cbr-xml-daily.ru/daily_json.js");
+        URL url = new URL(ApiUrls.CURRENCY_RATES_URL);
         Scanner scanner = new Scanner((InputStream) url.getContent());
         String result = "";
         while (scanner.hasNext()){
