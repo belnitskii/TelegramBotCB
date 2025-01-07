@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -16,7 +17,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @AllArgsConstructor
@@ -32,6 +35,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     public String getBotToken() {
         return botConfig.getToken();
     }
+
+    private final Map<Long, String> messageCache = new HashMap<>();
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -67,7 +73,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
 
             // Удаляем старое сообщение с кнопками
-            deleteMessage(chatId, messageId);
+//            deleteMessage(chatId, messageId);
 
             // Отправляем ответ
             String rate = null; // Метод для получения курса
@@ -76,9 +82,14 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            sendMessage(chatId, rate);
-            // Отображаем новое меню после ответа
-            sendCurrencyMenu(chatId, null);
+            if (messageId != null){
+                editMessageWithRate(chatId,messageId,rate);
+            } else {
+                sendMessage(chatId, currency);
+            }
+//            sendMessage(chatId, rate);
+//            // Отображаем новое меню после ответа
+//            sendCurrencyMenu(chatId, null);
         }
 
     }
@@ -153,4 +164,67 @@ public class TelegramBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
+    private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
+        String currentText = getCurrentMessageText(chatId);
+
+        if (newText.equals(currentText)) {
+            System.out.println("Сообщение не изменилось, редактирование пропущено.");
+            return; // Если текст совпадает, ничего не делаем
+        }
+
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId.toString());
+        editMessageText.setMessageId(messageId);
+        editMessageText.setText(newText);
+
+        // Добавляем кнопки обратно после обновления текста
+        InlineKeyboardMarkup keyboardMarkup = createCurrencyMenu();
+        editMessageText.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(editMessageText);
+            messageCache.put(chatId, newText);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private InlineKeyboardMarkup createCurrencyMenu() {
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        // Создание кнопок
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        row1.add(InlineKeyboardButton.builder()
+                .text("USD")
+                .callbackData("USD")
+                .build());
+        row1.add(InlineKeyboardButton.builder()
+                .text("EUR")
+                .callbackData("EUR")
+                .build());
+        buttons.add(row1);
+
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        row2.add(InlineKeyboardButton.builder()
+                .text("GBP")
+                .callbackData("GBP")
+                .build());
+        buttons.add(row2);
+
+        keyboardMarkup.setKeyboard(buttons);
+        return keyboardMarkup;
+    }
+
+    private String getCurrentMessageText(Long chatId) {
+        return messageCache.getOrDefault(chatId, "");
+    }
+
+    private void clearMessageCache(Long chatId) {
+        messageCache.remove(chatId);
+    }
+
+
 }
+

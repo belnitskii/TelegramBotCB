@@ -1,6 +1,7 @@
 package com.belnitskii.telegrambotcb.service;
 
 import com.belnitskii.telegrambotcb.model.Valuta;
+import com.belnitskii.telegrambotcb.util.DateTimeUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.expression.ParseException;
@@ -8,6 +9,7 @@ import org.springframework.expression.ParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.time.LocalDate;
 import java.util.Scanner;
 
 public class CurrencyService {
@@ -25,6 +27,8 @@ public class CurrencyService {
         JsonNode locatedNoteValuta = rootNode.path("Valute").path(message);
         System.out.println(locatedNoteValuta);
         Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
-        return "Курс " + valuta.getValue();
+        JsonNode dateTimeNode = rootNode.path("Date");
+        LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
+        return "Курс " + valuta.getName() + " " +  valuta.getValue() + " дата обновления " + dateUpdated;
     }
 }
