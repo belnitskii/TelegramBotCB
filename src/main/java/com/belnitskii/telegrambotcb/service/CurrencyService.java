@@ -49,7 +49,7 @@ public class CurrencyService {
     }
 
     private URL getUrlXmlWeek(String charCode) throws MalformedURLException {
-        String id = ValutaCharCode.valueOf(charCode).code;
+        String id = ValutaCharCode.valueOf(charCode).getCode();
         String dateNow = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         String dateBeforeWeek = LocalDate.now().minusDays(7).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
         URL url = new URL("https://www.cbr.ru/scripts/XML_dynamic.asp?" +

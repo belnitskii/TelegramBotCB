@@ -1,5 +1,8 @@
 package com.belnitskii.telegrambotcb.constant;
 
+import lombok.Getter;
+
+@Getter
 public enum ValutaCharCode {
     AUD("R01010"),
     AZN("R01020A"),
@@ -49,5 +52,14 @@ public enum ValutaCharCode {
 
     ValutaCharCode(String code) {
         this.code = code;
+    }
+
+    public static boolean Contain(String charCode){
+        for (ValutaCharCode value : ValutaCharCode.values()) {
+            if (value.name().equals(charCode)){
+                return true;
+            }
+        }
+        return false;
     }
 }

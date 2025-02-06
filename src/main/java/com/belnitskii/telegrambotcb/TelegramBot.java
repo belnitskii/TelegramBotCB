@@ -1,6 +1,7 @@
 package com.belnitskii.telegrambotcb;
 
 import com.belnitskii.telegrambotcb.config.BotConfig;
+import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.service.CurrencyService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -41,7 +42,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-
             if (messageText.equals("/start")) {
                 startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
             }
@@ -50,46 +50,38 @@ public class TelegramBot extends TelegramLongPollingBot {
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
 
-            if (callbackData.equals("USD") || callbackData.equals("EUR")) {
+            if(ValutaCharCode.Contain(callbackData)){
                 sendTimeFrameMenu(chatId, messageId, callbackData);
-            } else if (callbackData.startsWith("RATE_")) {
-                // Если выбрали период, показываем курс (заглушка)
-                String[] parts = callbackData.split("_");
-                String currency = parts[1];
-                String period = parts[2];
-                String rate = "null";
-                if (callbackData.endsWith("_TODAY")){
-                    try {
-                        rate = currencyService.getCurrencyRate(currency); // 👈 Вызываем CurrencyService
-                    } catch (IOException e) {
-                        rate = "Ошибка при получении курса валюты.";
-                    }
+            }
+            if (callbackData.endsWith("_WEEK")) {
+                String currency = callbackData.split("_")[0];
+                String rate = "";
+                try {
+                    rate = currencyService.getWeekCurrencyRate(currency);
+                } catch (IOException | ParseException e) {
+                    throw new RuntimeException(e);
                 }
-
-                if (callbackData.endsWith("_WEEK")){
-                    try {
-                        rate = currencyService.getWeekCurrencyRate(currency); // 👈 Вызываем CurrencyService
-                    } catch (IOException | ParseException e) {
-                        throw new RuntimeException(e);
-                    }
+                editMessageWithRate(chatId, messageId, rate);
+            }
+            if (callbackData.endsWith("_TODAY")) {
+                String currency = callbackData.split("_")[0];
+                String rate = "";
+                try {
+                    rate = currencyService.getCurrencyRate(currency);
+                } catch (IOException e) {
+                    rate = "Ошибка при получении курса валюты.";
                 }
-                editMessageWithRate(chatId, messageId,  rate);
+                editMessageWithRate(chatId, messageId, rate);
             }
         }
     }
 
-
     private void startCommandReceived(Long chatId, String name) {
-        String answer = "Hi, " + name + ", nice to meet you!" + "\n" +
-                "Enter the currency whose official exchange rate" + "\n" +
-                "you want to know in relation to BYN." + "\n" +
-                "For example: USD";
-
+        String answer = "Здравствуйте, " + name + ", выберите валюту";
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(answer);
         message.setReplyMarkup(createCurrencyMenu());
-
         try {
             execute(message);
         } catch (TelegramApiException e) {
@@ -107,8 +99,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Сегодня").callbackData("RATE_" + currency + "_TODAY").build());
-        row.add(InlineKeyboardButton.builder().text("За неделю").callbackData("RATE_" + currency + "_WEEK").build());
+        row.add(InlineKeyboardButton.builder().text("Сегодня").callbackData(currency + "_TODAY").build());
+        row.add(InlineKeyboardButton.builder().text("За неделю").callbackData(currency + "_WEEK").build());
         buttons.add(row);
 
         keyboardMarkup.setKeyboard(buttons);
@@ -152,7 +144,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessageText.setChatId(chatId.toString());
         editMessageText.setMessageId(messageId);
         editMessageText.setText(newText);
-
         try {
             execute(editMessageText);
         } catch (TelegramApiException e) {
