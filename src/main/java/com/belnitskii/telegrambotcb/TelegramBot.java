@@ -1,14 +1,11 @@
 package com.belnitskii.telegrambotcb;
 
 import com.belnitskii.telegrambotcb.config.BotConfig;
-import com.belnitskii.telegrambotcb.model.Valuta;
 import com.belnitskii.telegrambotcb.service.CurrencyService;
 import lombok.AllArgsConstructor;
-import org.springframework.expression.ParseException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -16,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +23,7 @@ import java.util.Map;
 @AllArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig botConfig;
+    private final CurrencyService currencyService;
 
     @Override
     public String getBotUsername() {
@@ -36,155 +35,86 @@ public class TelegramBot extends TelegramLongPollingBot {
         return botConfig.getToken();
     }
 
-    private final Map<Long, String> messageCache = new HashMap<>();
-
-
     @Override
     public void onUpdateReceived(Update update) {
-        Valuta valuta = new Valuta();
-        String currency = "";
-
-        if(update.hasMessage() && update.getMessage().hasText()){
+        if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
 
-            switch (messageText){
-                case "/start":
-                    startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
-                    sendCurrencyMenu(chatId, null);
-                    break;
-                default:
-                    try {
-                        currency = CurrencyService.getCurrencyRate(messageText);
-
-                    } catch (IOException e) {
-                        sendMessage(chatId, "We have not found such a currency." + "\n" +
-                                "Enter the currency whose official exchange rate" + "\n" +
-                                "you want to know in relation to BYN." + "\n" +
-                                "For example: USD");
-                    } catch (ParseException e) {
-                        throw new RuntimeException("Unable to parse date");
-                    }
-                    sendMessage(chatId, currency);
+            if (messageText.equals("/start")) {
+                startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
             }
         } else if (update.hasCallbackQuery()) {
-            String currencyCode = update.getCallbackQuery().getData();
+            String callbackData = update.getCallbackQuery().getData();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
 
-            // Удаляем старое сообщение с кнопками
-//            deleteMessage(chatId, messageId);
+            if (callbackData.equals("USD") || callbackData.equals("EUR")) {
+                sendTimeFrameMenu(chatId, messageId, callbackData);
+            } else if (callbackData.startsWith("RATE_")) {
+                // Если выбрали период, показываем курс (заглушка)
+                String[] parts = callbackData.split("_");
+                String currency = parts[1];
+                String period = parts[2];
+                String rate = "null";
+                if (callbackData.endsWith("_TODAY")){
+                    try {
+                        rate = currencyService.getCurrencyRate(currency); // 👈 Вызываем CurrencyService
+                    } catch (IOException e) {
+                        rate = "Ошибка при получении курса валюты.";
+                    }
+                }
 
-            // Отправляем ответ
-            String rate = null; // Метод для получения курса
-            try {
-                rate = CurrencyService.getCurrencyRate(currencyCode);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                if (callbackData.endsWith("_WEEK")){
+                    try {
+                        rate = currencyService.getWeekCurrencyRate(currency); // 👈 Вызываем CurrencyService
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                editMessageWithRate(chatId, messageId, "Курс " + currency + " за " + (period.equals("TODAY") ? "сегодня" : "неделю") + ": " + rate + " BYN");
             }
-            if (messageId != null){
-                editMessageWithRate(chatId,messageId,rate);
-            } else {
-                sendMessage(chatId, currency);
-            }
-//            sendMessage(chatId, rate);
-//            // Отображаем новое меню после ответа
-//            sendCurrencyMenu(chatId, null);
         }
-
     }
+
 
     private void startCommandReceived(Long chatId, String name) {
         String answer = "Hi, " + name + ", nice to meet you!" + "\n" +
                 "Enter the currency whose official exchange rate" + "\n" +
                 "you want to know in relation to BYN." + "\n" +
                 "For example: USD";
-        sendMessage(chatId, answer);
-    }
 
-    private void sendMessage(Long chatId, String textToSend){
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(chatId));
-        sendMessage.setText(textToSend);
-        try {
-            execute(sendMessage);
-        } catch (TelegramApiException e) {
-        }
-    }
-
-    private void sendCurrencyMenu(Long chatId, Integer oldMessageId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
-        message.setText("Выберите валюту:");
-
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-
-        // Создание кнопок с использованием билдера
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
-        row1.add(InlineKeyboardButton.builder()
-                .text("USD")
-                .callbackData("USD")
-                .build());
-        row1.add(InlineKeyboardButton.builder()
-                .text("EUR")
-                .callbackData("EUR")
-                .build());
-        buttons.add(row1);
-
-        List<InlineKeyboardButton> row2 = new ArrayList<>();
-        row2.add(InlineKeyboardButton.builder()
-                .text("GBP")
-                .callbackData("GBP")
-                .build());
-        buttons.add(row2);
-
-        keyboardMarkup.setKeyboard(buttons);
-        message.setReplyMarkup(keyboardMarkup);
+        message.setText(answer);
+        message.setReplyMarkup(createCurrencyMenu());
 
         try {
-            // Удаляем старое сообщение с кнопками, если передан oldMessageId
-            if (oldMessageId != null) {
-                deleteMessage(chatId, oldMessageId);
-            }
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
 
-    private void deleteMessage(Long chatId, Integer messageId) {
-        DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setChatId(chatId.toString());
-        deleteMessage.setMessageId(messageId);
+    private void sendTimeFrameMenu(Long chatId, Integer messageId, String currency) {
+        EditMessageText editMessage = new EditMessageText();
+        editMessage.setChatId(chatId.toString());
+        editMessage.setMessageId(messageId);
+        editMessage.setText("Выберите период для " + currency + ":");
+
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text("Сегодня").callbackData("RATE_" + currency + "_TODAY").build());
+        row.add(InlineKeyboardButton.builder().text("За неделю").callbackData("RATE_" + currency + "_WEEK").build());
+        buttons.add(row);
+
+        keyboardMarkup.setKeyboard(buttons);
+        editMessage.setReplyMarkup(keyboardMarkup);
 
         try {
-            execute(deleteMessage);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
-        String currentText = getCurrentMessageText(chatId);
-
-        if (newText.equals(currentText)) {
-            System.out.println("Сообщение не изменилось, редактирование пропущено.");
-            return; // Если текст совпадает, ничего не делаем
-        }
-
-        EditMessageText editMessageText = new EditMessageText();
-        editMessageText.setChatId(chatId.toString());
-        editMessageText.setMessageId(messageId);
-        editMessageText.setText(newText);
-
-        // Добавляем кнопки обратно после обновления текста
-        InlineKeyboardMarkup keyboardMarkup = createCurrencyMenu();
-        editMessageText.setReplyMarkup(keyboardMarkup);
-
-        try {
-            execute(editMessageText);
-            messageCache.put(chatId, newText);
+            execute(editMessage);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -194,7 +124,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
-        // Создание кнопок
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         row1.add(InlineKeyboardButton.builder()
                 .text("USD")
@@ -217,14 +146,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
-    private String getCurrentMessageText(Long chatId) {
-        return messageCache.getOrDefault(chatId, "");
+    private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId.toString());
+        editMessageText.setMessageId(messageId);
+        editMessageText.setText(newText);
+
+        try {
+            execute(editMessageText);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
-
-    private void clearMessageCache(Long chatId) {
-        messageCache.remove(chatId);
-    }
-
-
 }
 
