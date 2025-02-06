@@ -20,7 +20,7 @@ public class ValCurs {
     @JacksonXmlProperty(localName = "name", isAttribute = true)
     private String name;
 
-    @JacksonXmlElementWrapper(useWrapping = false) // Чтобы избежать лишнего вложения
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "Record")
     private List<Record> records;
 }

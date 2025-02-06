@@ -13,19 +13,10 @@ public class Record {
     private int nominal;
 
     @JacksonXmlProperty(localName = "Value")
-    private String rawValue; // Сначала храним как строку
+    private String rawValue;
 
     @JsonIgnore
     public double getValue() {
-        return Double.parseDouble(rawValue.replace(",", ".")); // Преобразуем запятую в точку
-    }
-
-    @Override
-    public String toString() {
-        return "Record{" +
-                "date='" + date + '\'' +
-                ", nominal=" + nominal +
-                ", rawValue='" + rawValue + '\'' +
-                '}';
+        return Double.parseDouble(rawValue.replace(",", "."));
     }
 }

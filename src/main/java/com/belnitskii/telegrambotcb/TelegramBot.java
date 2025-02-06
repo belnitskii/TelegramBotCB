@@ -69,13 +69,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                 if (callbackData.endsWith("_WEEK")){
                     try {
                         rate = currencyService.getWeekCurrencyRate(currency); // 👈 Вызываем CurrencyService
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    } catch (ParseException e) {
+                    } catch (IOException | ParseException e) {
                         throw new RuntimeException(e);
                     }
                 }
-                editMessageWithRate(chatId, messageId, "Курс " + currency + " за " + (period.equals("TODAY") ? "сегодня" : "неделю") + ": " + rate + " BYN");
+                editMessageWithRate(chatId, messageId,  rate);
             }
         }
     }
