@@ -14,6 +14,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,6 +70,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                     try {
                         rate = currencyService.getWeekCurrencyRate(currency); // 👈 Вызываем CurrencyService
                     } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (ParseException e) {
                         throw new RuntimeException(e);
                     }
                 }
