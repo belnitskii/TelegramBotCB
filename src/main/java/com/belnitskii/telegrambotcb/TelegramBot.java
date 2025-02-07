@@ -7,19 +7,19 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Component
 @AllArgsConstructor
@@ -50,12 +50,15 @@ public class TelegramBot extends TelegramLongPollingBot {
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
 
-            if(ValutaCharCode.Contain(callbackData)){
+            if (ValutaCharCode.Contain(callbackData)) {
                 sendTimeFrameMenu(chatId, messageId, callbackData);
             }
             if (callbackData.endsWith("_WEEK")) {
+                sendSecondTimeFrameMenu(chatId, messageId, callbackData);
+            }
+            if (callbackData.endsWith("_TEXT")) {
                 String currency = callbackData.split("_")[0];
-                String rate = "";
+                String rate;
                 try {
                     rate = currencyService.getWeekCurrencyRate(currency);
                 } catch (IOException | ParseException e) {
@@ -63,9 +66,19 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
                 editMessageWithRate(chatId, messageId, rate);
             }
+            if (callbackData.endsWith("_CHART")) {
+                String currency = callbackData.split("_")[0];
+                try {
+                    File chart = currencyService.getWeekChartCurrencyRate(currency);
+                    sendChart(String.valueOf(chatId), chart);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                editMessageWithRate(chatId, messageId, "Вот ваш график");
+            }
             if (callbackData.endsWith("_TODAY")) {
                 String currency = callbackData.split("_")[0];
-                String rate = "";
+                String rate;
                 try {
                     rate = currencyService.getCurrencyRate(currency);
                 } catch (IOException e) {
@@ -113,6 +126,30 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void sendSecondTimeFrameMenu(Long chatId, Integer messageId, String currency) {
+        EditMessageText editMessage = new EditMessageText();
+        editMessage.setChatId(chatId.toString());
+        editMessage.setMessageId(messageId);
+        editMessage.setText("Выберите удобный вариант отображения " + currency + ":");
+
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        row.add(InlineKeyboardButton.builder().text("Текст").callbackData(currency + "_TEXT").build());
+        row.add(InlineKeyboardButton.builder().text("График").callbackData(currency + "_CHART").build());
+        buttons.add(row);
+
+        keyboardMarkup.setKeyboard(buttons);
+        editMessage.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(editMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
     private InlineKeyboardMarkup createCurrencyMenu() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -146,6 +183,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessageText.setText(newText);
         try {
             execute(editMessageText);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendChart(String chatId, File chart) {
+        SendPhoto sendPhoto = new SendPhoto();
+        sendPhoto.setChatId(chatId);
+        sendPhoto.setPhoto(new InputFile(chart));
+
+        try {
+            execute(sendPhoto);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }

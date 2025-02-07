@@ -13,6 +13,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.springframework.expression.ParseException;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -20,6 +21,8 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
+
+import static com.belnitskii.telegrambotcb.util.ChartUtil.generateChart;
 
 @Service
 public class CurrencyService {
@@ -40,7 +43,8 @@ public class CurrencyService {
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         StringBuilder stringBuilder = new StringBuilder();
-        for (Record record : xmlMapper.readValue(splitResponseUrl, ValCurs.class).getRecords()) {
+        ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
+        for (Record record : valCurs.getRecords()) {
             stringBuilder.append("Дата: ").append(record.getDate()).append("\n");
             stringBuilder.append("Курс: ").append(record.getValue()).append("\n");
             stringBuilder.append("--------------------").append("\n");
@@ -48,21 +52,31 @@ public class CurrencyService {
         return stringBuilder.toString();
     }
 
+    public File getWeekChartCurrencyRate(String charCodeName) throws IOException {
+        URL url = getUrlXmlWeek(charCodeName);
+        String splitResponseUrl = splitResponseUrl(url);
+        XmlMapper xmlMapper = new XmlMapper();
+        xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
+        File chart = generateChart(charCodeName, valCurs.getRecords());
+        System.out.println("График сохранен в: " + chart.getAbsolutePath());
+        return chart;
+    }
+
     private URL getUrlXmlWeek(String charCode) throws MalformedURLException {
         String id = ValutaCharCode.valueOf(charCode).getCode();
         String dateNow = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        String dateBeforeWeek = LocalDate.now().minusDays(7).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        URL url = new URL("https://www.cbr.ru/scripts/XML_dynamic.asp?" +
+        String dateBeforeWeek = LocalDate.now().minusDays(8).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        return new URL("https://www.cbr.ru/scripts/XML_dynamic.asp?" +
                 "date_req1=" + dateBeforeWeek +
                 "&date_req2=" + dateNow +
                 "&VAL_NM_RQ=" + id);
-        return url;
     }
 
     private String splitResponseUrl(URL url) throws IOException {
         Scanner scanner = new Scanner((InputStream) url.getContent());
         StringBuilder result = new StringBuilder();
-        while (scanner.hasNext()){
+        while (scanner.hasNext()) {
             result.append(scanner.nextLine());
         }
         return result.toString();
