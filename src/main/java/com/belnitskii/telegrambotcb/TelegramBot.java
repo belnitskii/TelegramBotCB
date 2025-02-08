@@ -6,13 +6,19 @@ import com.belnitskii.telegrambotcb.service.CurrencyService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
@@ -42,16 +48,42 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-            if (messageText.equals("/start")) {
-                startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+            switch (messageText) {
+                case "Курс валюты":
+                    startCommandReceived(chatId);
+                    break;
+                case "/help", "Помощь":
+                    sendMessage(chatId, "Этот бот показывает курсы валют. Доступные команды:\n/help - помощь\n/start - старт\n/about - о программе");
+                    break;
+                case "/about", "О программе":
+                    sendMessage(chatId, "Что-то о программе, потом добавлю");
+                    break;
+                case "/start":
+                    sendMessageWithKeyboard(chatId, "Здравствуйте " + update.getMessage().getChat().getFirstName() + "! Я Telegram-бот, который показывает курсы валют.");
+                    startCommandReceived(chatId);
+                    break;
+                default:
+                    sendMessage(chatId, "Неизвестная команда. Введите /help для получения списка доступных команд.");
             }
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
-
             if (ValutaCharCode.Contain(callbackData)) {
                 sendTimeFrameMenu(chatId, messageId, callbackData);
+            }
+            if (callbackData.equals("Другая Валюта")) {
+                sendCharCodeMenu(chatId, messageId, callbackData);
+            }
+            if (callbackData.endsWith("_TODAY")) {
+                String currency = callbackData.split("_")[0];
+                String rate;
+                try {
+                    rate = currencyService.getCurrencyRate(currency);
+                } catch (IOException e) {
+                    rate = "Ошибка при получении курса валюты.";
+                }
+                editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_WEEK")) {
                 sendSecondTimeFrameMenu(chatId, messageId, callbackData);
@@ -76,27 +108,29 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
                 editMessageWithRate(chatId, messageId, "Вот ваш график");
             }
-            if (callbackData.endsWith("_TODAY")) {
-                String currency = callbackData.split("_")[0];
-                String rate;
-                try {
-                    rate = currencyService.getCurrencyRate(currency);
-                } catch (IOException e) {
-                    rate = "Ошибка при получении курса валюты.";
-                }
-                editMessageWithRate(chatId, messageId, rate);
-            }
         }
     }
 
-    private void startCommandReceived(Long chatId, String name) {
-        String answer = "Здравствуйте, " + name + ", выберите валюту";
+    private void startCommandReceived(Long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
-        message.setText(answer);
+        message.setText("Выберите валюту:");
         message.setReplyMarkup(createCurrencyMenu());
         try {
             execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendCharCodeMenu(Long chatId, Integer messageId, String currency) {
+        EditMessageText editMessage = new EditMessageText();
+        editMessage.setChatId(chatId.toString());
+        editMessage.setMessageId(messageId);
+        editMessage.setText("Выберите период для " + currency + ":");
+        editMessage.setReplyMarkup(createCharCodeMenu());
+        try {
+            execute(editMessage);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -107,7 +141,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
         editMessage.setText("Выберите период для " + currency + ":");
-
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
@@ -130,7 +163,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
-        editMessage.setText("Выберите удобный вариант отображения " + currency + ":");
+        editMessage.setText("Выберите удобный вариант отображения " + currency.split("_")[0] + ":");
 
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -150,6 +183,24 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private InlineKeyboardMarkup createCharCodeMenu() {
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
+
+        for (ValutaCharCode charCode : ValutaCharCode.values()) {
+            InlineKeyboardButton button = InlineKeyboardButton.builder()
+                    .text(charCode.name() + " — " + charCode.getName())
+                    .callbackData(charCode.name())
+                    .build();
+            List<InlineKeyboardButton> list = new ArrayList<>();
+            list.add(button);
+            buttons.add(list);
+        }
+
+        keyboardMarkup.setKeyboard(buttons);
+        return keyboardMarkup;
+    }
+
     private InlineKeyboardMarkup createCurrencyMenu() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -167,12 +218,32 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         row2.add(InlineKeyboardButton.builder()
-                .text("GBP")
-                .callbackData("GBP")
+                .text("Другая Валюта")
+                .callbackData("Другая Валюта")
                 .build());
         buttons.add(row2);
 
         keyboardMarkup.setKeyboard(buttons);
+        return keyboardMarkup;
+    }
+
+    private ReplyKeyboardMarkup getReplyKeyboard() {
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add(new KeyboardButton("Курс валюты"));
+        keyboardRows.add(row1);
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(new KeyboardButton("Помощь"));
+        row2.add(new KeyboardButton("О программе"));
+        keyboardRows.add(row2);
+
+        keyboardMarkup.setKeyboard(keyboardRows);
         return keyboardMarkup;
     }
 
@@ -188,6 +259,24 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    public void setBotCommands() {
+        List<BotCommand> commands = List.of(
+                new BotCommand("/start", "Запуск бота"),
+                new BotCommand("/help", "Помощь"),
+                new BotCommand("/about", "О программе")
+        );
+
+        SetMyCommands setMyCommands = new SetMyCommands(commands, new BotCommandScopeDefault(), null);
+
+        try {
+            execute(setMyCommands);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
     private void sendChart(String chatId, File chart) {
         SendPhoto sendPhoto = new SendPhoto();
         sendPhoto.setChatId(chatId);
@@ -196,6 +285,30 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(sendPhoto);
         } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessage(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+        try {
+            execute(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessageWithKeyboard(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+        message.setReplyMarkup(getReplyKeyboard());
+
+        try {
+            execute(message);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

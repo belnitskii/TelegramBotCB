@@ -2,7 +2,6 @@ package com.belnitskii.telegrambotcb.service;
 
 import com.belnitskii.telegrambotcb.config.ApiUrls;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
-import com.belnitskii.telegrambotcb.model.Record;
 import com.belnitskii.telegrambotcb.model.ValCurs;
 import com.belnitskii.telegrambotcb.model.Valuta;
 import com.belnitskii.telegrambotcb.util.DateTimeUtil;
@@ -34,7 +33,7 @@ public class CurrencyService {
         Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
         JsonNode dateTimeNode = rootNode.path("Date");
         LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
-        return "Курс " + valuta.getName() + " " + valuta.getValue() + " дата обновления " + dateUpdated;
+        return "Курс " + valuta.getCharCode() + " к RUB " + dateUpdated + "\n1 " + valuta.getCharCode() + " = " + valuta.getValue() + " RUB";
     }
 
     public String getWeekCurrencyRate(String charCodeName) throws IOException, java.text.ParseException {
@@ -42,12 +41,12 @@ public class CurrencyService {
         String splitResponseUrl = splitResponseUrl(url);
         XmlMapper xmlMapper = new XmlMapper();
         xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        StringBuilder stringBuilder = new StringBuilder();
         ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
-        for (Record record : valCurs.getRecords()) {
-            stringBuilder.append("Дата: ").append(record.getDate()).append("\n");
-            stringBuilder.append("Курс: ").append(record.getValue()).append("\n");
-            stringBuilder.append("--------------------").append("\n");
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Курс ").append(charCodeName).append(" к RUB за ").append(valCurs.getRecords().size()).append(" дней.\n(");
+        stringBuilder.append(valCurs.getRecords().getLast().getDate()).append(" — ").append(valCurs.getRecords().getFirst().getDate()).append(")\n\n");
+        for (int i = valCurs.getRecords().size() - 1; i >= 0; i--) {
+            stringBuilder.append("1 ").append(charCodeName).append(" = ").append(String.format("%.2f", valCurs.getRecords().get(i).getValue())).append(" RUB\n");
         }
         return stringBuilder.toString();
     }
