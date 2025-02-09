@@ -4,6 +4,7 @@ import com.belnitskii.telegrambotcb.config.BotConfig;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.service.CurrencyService;
 import lombok.AllArgsConstructor;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -20,6 +21,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +32,7 @@ import java.util.List;
 @Component
 @AllArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
+    private static final Logger logger = LoggerFactory.getLogger(TelegramBot.class);
     private final BotConfig botConfig;
     private final CurrencyService currencyService;
 
@@ -48,6 +51,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
+            logger.info("Сообщение от пользователя {} (ID: {}): {}", update.getMessage().getFrom().getFirstName(), update.getMessage().getChatId(), update.getMessage().getText());
+
             switch (messageText) {
                 case "Курс валюты":
                     startCommandReceived(chatId);
@@ -66,6 +71,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, "Неизвестная команда. Введите /help для получения списка доступных команд.");
             }
         } else if (update.hasCallbackQuery()) {
+            logger.info("Пользователь {} (ID: {}):  {}",update.getCallbackQuery().getFrom().getFirstName(), update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getData());
             String callbackData = update.getCallbackQuery().getData();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
@@ -132,7 +138,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(editMessage);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendCharCodeMenu", e);
         }
     }
 
@@ -155,7 +161,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(editMessage);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendTimeFrameMenu", e);
         }
     }
 
@@ -179,7 +185,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(editMessage);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendSecondTimeFrameMenu", e);
         }
     }
 
@@ -255,7 +261,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(editMessageText);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения editMessageWithRate", e);
         }
     }
 
@@ -271,7 +277,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(setMyCommands);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения setBotCommands", e);
         }
     }
 
@@ -285,7 +291,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(sendPhoto);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendChart", e);
         }
     }
 
@@ -296,7 +302,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendMessage", e);
         }
     }
 
@@ -309,7 +315,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения sendMessageWithKeyboard", e);
         }
     }
 }
