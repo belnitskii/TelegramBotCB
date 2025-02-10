@@ -88,6 +88,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, "Что-то о программе, потом добавлю");
                     break;
                 case "/start":
+                    setBotCommands();
                     sendMessageWithKeyboard(chatId, "Здравствуйте " + update.getMessage().getChat().getFirstName() + "! Я Telegram-бот, который показывает курсы валют.");
                     startCommandReceived(chatId);
                     break;
@@ -139,6 +140,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(chatId.toString());
         message.setText("Выберите валюту:");
         message.setReplyMarkup(createCurrencyMenu());
+
         try {
             execute(message);
         } catch (TelegramApiException e) {
@@ -342,6 +344,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             execute(setMyCommands);
+            logger.info("Команды установлены {}", commands);
         } catch (Exception e) {
             logger.error("Ошибка выполнения setBotCommands", e);
         }
