@@ -2,6 +2,10 @@ package com.belnitskii.telegrambotcb.constant;
 
 import lombok.Getter;
 
+/**
+ * Перечисление, представляющее коды и названия валют, поддерживаемых Центробанком РФ.
+ * Каждый элемент содержит буквенный код валюты (ISO 4217), внутренний код Центробанка и её название.
+ */
 @Getter
 public enum ValutaCharCode {
     AUD("R01010", "Австралийский доллар"),
@@ -48,14 +52,33 @@ public enum ValutaCharCode {
     KRW("R01815", "Вон"),
     JPY("R01820", "Иен");
 
+    /**
+     * Внутренний код валюты в Центробанке РФ.
+     */
     public final String code;
+
+    /**
+     * Полное название валюты.
+     */
     public final String name;
 
+    /**
+     * Конструктор для перечисления валют.
+     *
+     * @param code Внутренний код валюты Центробанка РФ.
+     * @param name Полное название валюты.
+     */
     ValutaCharCode(String code, String name) {
         this.code = code;
         this.name = name;
     }
 
+    /**
+     * Проверяет, содержится ли указанная валюта в списке поддерживаемых валют.
+     *
+     * @param charCode Буквенный код валюты (например, "USD", "EUR").
+     * @return true, если валюта есть в перечислении, иначе false.
+     */
     public static boolean Contain(String charCode) {
         for (ValutaCharCode value : ValutaCharCode.values()) {
             if (value.name().equals(charCode)) {
@@ -67,3 +90,5 @@ public enum ValutaCharCode {
 
 
 }
+
+

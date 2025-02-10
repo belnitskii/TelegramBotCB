@@ -12,7 +12,22 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Утилитный класс для работы с графиками валютных курсов.
+ * Предоставляет метод для генерации графика на основе списка записей.
+ */
 public class ChartUtil {
+
+    /**
+     * Генерирует график валютного курса на основе списка записей и сохраняет его в файл.
+     * График будет отображать изменения валютного курса по датам.
+     * Ожидается, что каждая запись в списке содержит дату и значение валютного курса.
+     *
+     * @param charCodeName имя валюты или её кода, который будет использоваться на графике.
+     * @param recordList список записей с данными о валютных курсах, где каждая запись содержит дату и значение.
+     * @return {@link File} объект, представляющий файл с сохраненным графиком в формате PNG.
+     * @throws IOException если произошла ошибка при сохранении графика в файл.
+     */
     public static File generateChart(String charCodeName, List<Record> recordList) throws IOException {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         int minValue = Integer.MAX_VALUE;

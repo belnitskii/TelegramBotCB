@@ -2,16 +2,19 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/bot.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Шаблон имени файла для архивируемых логов, включает дату -->
             <fileNamePattern>logs/bot-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory> <!-- Храним логи за последние 7 дней -->
         </rollingPolicy>
         <encoder>
+            <!-- Шаблон для форматирования сообщений в логе -->
             <pattern>%d{yyyy-MM-dd HH:mm:ss} | %-5level | %thread | %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
+            <!-- Шаблон для консольного вывода с подсветкой уровня логирования -->
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %highlight([%level]) %cyan(%logger{36}) - %msg%n</pattern>
         </encoder>
     </appender>
