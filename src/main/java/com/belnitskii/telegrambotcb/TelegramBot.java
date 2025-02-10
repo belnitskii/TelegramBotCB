@@ -99,7 +99,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             String callbackData = update.getCallbackQuery().getData();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
-            if (ValutaCharCode.Contain(callbackData)) {
+            if (ValutaCharCode.contain(callbackData)) {
                 sendTimeFrameMenu(chatId, messageId, callbackData);
             }
             if (callbackData.equals("Другая Валюта")) {

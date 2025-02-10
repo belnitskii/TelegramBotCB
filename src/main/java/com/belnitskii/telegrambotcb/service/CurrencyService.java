@@ -41,7 +41,6 @@ public class CurrencyService {
      * @param charCode Символ валюты (например, USD, EUR).
      * @return Строка с курсом валюты или {@code null} в случае ошибки.
      * @throws ParseException Если возникла ошибка при парсинге данных.
-     * @throws IOException    Если произошла ошибка при чтении данных.
      */
     public String getCurrencyRate(String charCode) {
         try {
@@ -68,7 +67,6 @@ public class CurrencyService {
      *
      * @param charCodeName Символ валюты (например, USD, EUR).
      * @return Строка с курсами валюты за неделю или {@code null} в случае ошибки.
-     * @throws IOException  Если произошла ошибка при чтении данных.
      * @throws ParseException Если возникла ошибка при парсинге данных.
      */
     public String getWeekCurrencyRate(String charCodeName) {
@@ -99,7 +97,6 @@ public class CurrencyService {
      *
      * @param charCodeName Символ валюты (например, USD, EUR).
      * @return Файл с изображением графика курса валюты или {@code null} в случае ошибки.
-     * @throws IOException Если произошла ошибка при чтении данных или создании графика.
      */
     public File getWeekChartCurrencyRate(String charCodeName) {
         try {
@@ -123,7 +120,6 @@ public class CurrencyService {
      *
      * @param charCode Символ валюты (например, USD, EUR).
      * @return URL для получения XML данных о курсе валюты за неделю.
-     * @throws MalformedURLException Если URL неправильно сформирован.
      */
     private URL getUrlXmlWeek(String charCode) {
         try {

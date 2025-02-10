@@ -55,12 +55,12 @@ public enum ValutaCharCode {
     /**
      * Внутренний код валюты в Центробанке РФ.
      */
-    public final String code;
+    private final String code;
 
     /**
      * Полное название валюты.
      */
-    public final String name;
+    private final String name;
 
     /**
      * Конструктор для перечисления валют.
@@ -79,7 +79,7 @@ public enum ValutaCharCode {
      * @param charCode Буквенный код валюты (например, "USD", "EUR").
      * @return true, если валюта есть в перечислении, иначе false.
      */
-    public static boolean Contain(String charCode) {
+    public static boolean contain(String charCode) {
         for (ValutaCharCode value : ValutaCharCode.values()) {
             if (value.name().equals(charCode)) {
                 return true;
