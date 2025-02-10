@@ -4,6 +4,7 @@ import com.belnitskii.telegrambotcb.config.BotConfig;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.service.CurrencyService;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -21,14 +22,18 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-import org.slf4j.Logger;
 
 import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Основной класс Telegram-бота, обрабатывающий входящие сообщения и команды.
+ * <p>
+ * Этот класс отвечает за взаимодействие с Telegram API, обработку пользовательских команд
+ * и отправку ответов пользователям.
+ * </p>
+ */
 @Component
 @AllArgsConstructor
 public class TelegramBot extends TelegramLongPollingBot {
@@ -36,16 +41,35 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig botConfig;
     private final CurrencyService currencyService;
 
+    /**
+     * Получает имя бота.
+     *
+     * @return Имя бота, указанное в конфигурации.
+     */
     @Override
     public String getBotUsername() {
         return botConfig.getBotName();
     }
 
+    /**
+     * Получает токен бота.
+     *
+     * @return Токен для авторизации в Telegram API.
+     */
     @Override
     public String getBotToken() {
         return botConfig.getToken();
     }
 
+    /**
+     * Обрабатывает входящие обновления от Telegram API.
+     * <p>
+     * Этот метод вызывается при получении нового сообщения или callback-запроса.
+     * В зависимости от входящих данных бот отправляет ответное сообщение или выполняет действие.
+     * </p>
+     *
+     * @param update Объект, содержащий данные о новом событии.
+     */
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -84,11 +108,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_TODAY")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                try {
-                    rate = currencyService.getCurrencyRate(currency);
-                } catch (IOException e) {
-                    rate = "Ошибка при получении курса валюты.";
-                }
+                rate = currencyService.getCurrencyRate(currency);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_WEEK")) {
@@ -97,26 +117,23 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_TEXT")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                try {
-                    rate = currencyService.getWeekCurrencyRate(currency);
-                } catch (IOException | ParseException e) {
-                    throw new RuntimeException(e);
-                }
+                rate = currencyService.getWeekCurrencyRate(currency);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_CHART")) {
                 String currency = callbackData.split("_")[0];
-                try {
-                    File chart = currencyService.getWeekChartCurrencyRate(currency);
-                    sendChart(String.valueOf(chatId), chart);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                File chart = currencyService.getWeekChartCurrencyRate(currency);
+                sendChart(String.valueOf(chatId), chart);
                 editMessageWithRate(chatId, messageId, "Вот ваш график");
             }
         }
     }
 
+    /**
+     * Отправляет меню выбора валют.
+     *
+     * @param chatId ID чата, куда отправить сообщение.
+     */
     private void startCommandReceived(Long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
@@ -125,10 +142,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            logger.error("Ошибка выполнения startCommandReceived", e);
         }
     }
 
+    /**
+     * Отправляет пользователю inline-клавиатуру всей доступной для выбора валюты.
+     *
+     * @param chatId    ID чата.
+     * @param messageId ID сообщения, которое будет редактироваться.
+     * @param currency  Код валюты.
+     */
     private void sendCharCodeMenu(Long chatId, Integer messageId, String currency) {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
@@ -142,6 +166,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Отправляет пользователю меню выбора временного интервала для отображения курса валют.
+     *
+     * @param chatId    ID чата пользователя.
+     * @param messageId ID сообщения, которое будет редактироваться.
+     * @param currency  Код валюты.
+     */
     private void sendTimeFrameMenu(Long chatId, Integer messageId, String currency) {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
@@ -165,6 +196,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Отправляет пользователю меню выбора формата отображения курса валют за неделю, текстом или в виде графика.
+     *
+     * @param chatId    ID чата пользователя.
+     * @param messageId ID сообщения, которое будет редактироваться.
+     * @param currency  Код валюты с суффиксом "_WEEK".
+     */
     private void sendSecondTimeFrameMenu(Long chatId, Integer messageId, String currency) {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
@@ -189,6 +227,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Создает inline-клавиатуру с доступными валютами.
+     *
+     * @return {@link InlineKeyboardMarkup} с кнопками выбора валюты.
+     */
     private InlineKeyboardMarkup createCharCodeMenu() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -207,6 +250,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
+    /**
+     * Создает inline-клавиатуру с основными валютами и возможностью выбора других.
+     *
+     * @return {@link InlineKeyboardMarkup} с кнопками выбора валюты.
+     */
     private InlineKeyboardMarkup createCurrencyMenu() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
@@ -233,6 +281,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
+    /**
+     * Создает клавиатуру для отправки пользователю с основными командами.
+     *
+     * @return {@link ReplyKeyboardMarkup} с кнопками для управления ботом.
+     */
     private ReplyKeyboardMarkup getReplyKeyboard() {
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
@@ -253,6 +306,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         return keyboardMarkup;
     }
 
+    /**
+     * Редактирует сообщение, добавляя в него новый текст с полученным курсом валют.
+     *
+     * @param chatId    ID чата.
+     * @param messageId ID сообщения, которое нужно отредактировать.
+     * @param newText   Новый текст сообщения.
+     */
     private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
         EditMessageText editMessageText = new EditMessageText();
         editMessageText.setChatId(chatId.toString());
@@ -265,6 +325,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Устанавливает команды бота в Telegram.
+     * <p>
+     * Команды включают: старт, помощь и информацию о боте.
+     * </p>
+     */
     public void setBotCommands() {
         List<BotCommand> commands = List.of(
                 new BotCommand("/start", "Запуск бота"),
@@ -282,7 +348,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
 
-
+    /**
+     * Отправляет изображение (график курса валют) пользователю.
+     *
+     * @param chatId ID чата.
+     * @param chart  Файл с изображением графика.
+     */
     private void sendChart(String chatId, File chart) {
         SendPhoto sendPhoto = new SendPhoto();
         sendPhoto.setChatId(chatId);
@@ -295,6 +366,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Отправляет текстовое сообщение пользователю.
+     *
+     * @param chatId ID чата.
+     * @param text   Текст сообщения.
+     */
     private void sendMessage(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
@@ -306,6 +383,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Отправляет текстовое сообщение с клавиатурой.
+     * Использую при выполнении команды /start, пользователь получает приветственное сообщение
+     * и кнопки ReplyKeyboardMarkup меню {@link #getReplyKeyboard()}.
+     *
+     * @param chatId ID чата.
+     * @param text   Текст сообщения.
+     */
     private void sendMessageWithKeyboard(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
