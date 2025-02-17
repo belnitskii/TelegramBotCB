@@ -10,47 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Шаг 1: Проверка кода
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Шаг 2: Чтение переменных из локального .env
-      - name: Load .env file
-        run: |
-          if [ -f .env ]; then
-            echo "BOT_TOKEN=$(grep '^BOT_TOKEN=' .env | cut -d '=' -f2-)" >> $GITHUB_ENV
-            echo "BOT_NAME=$(grep '^BOT_NAME=' .env | cut -d '=' -f2-)" >> $GITHUB_ENV
-          else
-            echo "Error: .env file not found!"
-            exit 1
-          fi
-
-      # Шаг 3: Обновление GitHub Secrets
-      - name: Update GitHub Secrets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh secret set BOT_TOKEN --body "$BOT_TOKEN"
-          gh secret set BOT_NAME --body "$BOT_NAME"
-
-      # Шаг 4: Установка Java
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      # Шаг 5: Сборка проекта с Maven
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml
-
-      # Шаг 6: Установка Docker Compose
-      - name: Set up Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-
-      # Шаг 7: Деплой на сервер
       - name: Deploy to server
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
@@ -64,15 +26,11 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
 
-          # Создание .env на сервере с новыми значениями
           echo "BOT_TOKEN=$BOT_TOKEN" > .env
           echo "BOT_NAME=$BOT_NAME" >> .env
 
-          # Копирование .env на сервер
           scp -i ~/.ssh/id_rsa .env $SERVER_USER@$SERVER_HOST:/home/belnitskii/TelegramBotCB/.env
 
-          # Деплой
-          echo "Deploying..."
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
           cd /home/belnitskii/TelegramBotCB
           docker-compose down || true
