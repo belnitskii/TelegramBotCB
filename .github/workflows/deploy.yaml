@@ -3,7 +3,7 @@ name: Deploy Telegram Bot
 on:
   push:
     branches:
-      - main  # Указываем ветку, при пуше в которую будет запускаться workflow
+      - main
 
 jobs:
   deploy:
@@ -60,7 +60,19 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
-          ssh $SERVER_USER@$SERVER_HOST << 'EOF'
+          
+          # Проверка подключения
+          echo "Testing SSH connection..."
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful!'"
+          
+          # Проверка Docker
+          echo "Checking Docker..."
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "docker --version && docker-compose --version"
+          
+          # Деплой
+          echo "Deploying..."
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
+          cd /TelegramBotCB  
           docker-compose down || true
           docker-compose up -d --build
           EOF
