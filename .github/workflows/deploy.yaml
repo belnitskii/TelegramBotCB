@@ -53,28 +53,20 @@ jobs:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}  # Добавьте BOT_TOKEN в секреты GitHub
+          BOT_NAME: ${{ secrets.BOT_NAME }}    # Добавьте BOT_NAME в секреты GitHub
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
 
-          # Проверка подключения
-          echo "Testing SSH connection..."
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful!'"
+          # Запись переменных в .env на сервере
+          echo "BOT_TOKEN=$BOT_TOKEN" > .env
+          echo "BOT_NAME=$BOT_NAME" >> .env
 
-          # Проверка Docker
-          echo "Checking Docker..."
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "docker --version"
-
-          # Установка Docker Compose (если не установлен)
-          echo "Installing Docker Compose..."
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
-          if ! command -v docker-compose &> /dev/null; then
-            sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-          fi
-          EOF
+          # Копирование .env на сервер
+          scp -i ~/.ssh/id_rsa .env $SERVER_USER@$SERVER_HOST:/home/belnitskii/TelegramBotCB/.env
 
           # Деплой
           echo "Deploying..."
