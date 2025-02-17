@@ -79,7 +79,7 @@ jobs:
           # Деплой
           echo "Deploying..."
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
-          cd /path/to/your/project  # Убедитесь, что путь правильный
+          cd /TelegramBotCB  # Убедитесь, что путь правильный
           docker-compose down || true
           docker-compose up -d --build
           EOF
