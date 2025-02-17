@@ -333,7 +333,7 @@ public class TelegramBot extends TelegramLongPollingBot {
      * Команды включают: старт, помощь и информацию о боте.
      * </p>
      */
-    public void setBotCommands() {
+    private void setBotCommands() {
         List<BotCommand> commands = List.of(
                 new BotCommand("/start", "Запуск бота"),
                 new BotCommand("/help", "Помощь"),
