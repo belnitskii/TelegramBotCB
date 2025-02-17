@@ -53,26 +53,33 @@ jobs:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          BOT_TOKEN: ${{ env.BOT_TOKEN }}
-          BOT_NAME: ${{ env.BOT_NAME }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
-          
+
           # Проверка подключения
           echo "Testing SSH connection..."
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "echo 'SSH connection successful!'"
-          
+
           # Проверка Docker
           echo "Checking Docker..."
-          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "docker --version && docker-compose --version"
-          
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST "docker --version"
+
+          # Установка Docker Compose (если не установлен)
+          echo "Installing Docker Compose..."
+          ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+          fi
+          EOF
+
           # Деплой
           echo "Deploying..."
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
-          cd /TelegramBotCB  
+          cd /path/to/your/project  # Убедитесь, что путь правильный
           docker-compose down || true
           docker-compose up -d --build
           EOF
