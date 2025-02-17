@@ -4,6 +4,9 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Ignore .env files with sensitive data
+.env
+
 ### STS ###
 .apt_generated
 .classpath
