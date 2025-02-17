@@ -350,7 +350,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-
     /**
      * Отправляет изображение (график курса валют) пользователю.
      *
