@@ -14,54 +14,57 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Шаг 2: Установка Java
+      # Шаг 2: Чтение переменных из локального .env
+      - name: Load .env file
+        run: |
+          if [ -f .env ]; then
+            echo "BOT_TOKEN=$(grep '^BOT_TOKEN=' .env | cut -d '=' -f2-)" >> $GITHUB_ENV
+            echo "BOT_NAME=$(grep '^BOT_NAME=' .env | cut -d '=' -f2-)" >> $GITHUB_ENV
+          else
+            echo "Error: .env file not found!"
+            exit 1
+          fi
+
+      # Шаг 3: Обновление GitHub Secrets
+      - name: Update GitHub Secrets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh secret set BOT_TOKEN --body "$BOT_TOKEN"
+          gh secret set BOT_NAME --body "$BOT_NAME"
+
+      # Шаг 4: Установка Java
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      # Шаг 3: Сборка проекта с Maven
+      # Шаг 5: Сборка проекта с Maven
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
-      # Шаг 4: Установка Docker Compose
+      # Шаг 6: Установка Docker Compose
       - name: Set up Docker Compose
         run: |
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
 
-      # Шаг 5: Установка переменных окружения из .env
-      - name: Load .env file
-        run: |
-          if grep -q '^BOT_TOKEN=' .env; then
-            BOT_TOKEN_VALUE=$(grep '^BOT_TOKEN=' .env | cut -d '=' -f2-)
-            if [ -n "$BOT_TOKEN_VALUE" ]; then
-              echo "BOT_TOKEN=$BOT_TOKEN_VALUE" >> $GITHUB_ENV
-            fi
-          fi
-          if grep -q '^BOT_NAME=' .env; then
-            BOT_NAME_VALUE=$(grep '^BOT_NAME=' .env | cut -d '=' -f2-)
-            if [ -n "$BOT_NAME_VALUE" ]; then
-              echo "BOT_NAME=$BOT_NAME_VALUE" >> $GITHUB_ENV
-            fi
-          fi
-
-      # Шаг 6: Деплой на удаленный сервер
+      # Шаг 7: Деплой на сервер
       - name: Deploy to server
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}  # Добавьте BOT_TOKEN в секреты GitHub
-          BOT_NAME: ${{ secrets.BOT_NAME }}    # Добавьте BOT_NAME в секреты GitHub
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BOT_NAME: ${{ secrets.BOT_NAME }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
 
-          # Запись переменных в .env на сервере
+          # Создание .env на сервере с новыми значениями
           echo "BOT_TOKEN=$BOT_TOKEN" > .env
           echo "BOT_NAME=$BOT_NAME" >> .env
 
