@@ -21,6 +21,16 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           BOT_NAME: ${{ secrets.BOT_NAME }}
         run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+
+          echo "BOT_TOKEN=$BOT_TOKEN" > .env
+          echo "BOT_NAME=$BOT_NAME" >> .env
+
+          scp -i ~/.ssh/id_rsa .env $SERVER_USER@$SERVER_HOST:/home/belnitskii/TelegramBotCB/.env
+
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
           cd /home/belnitskii/TelegramBotCB
           mvn clean package -DskipTests  # Пересобираем JAR-файл
