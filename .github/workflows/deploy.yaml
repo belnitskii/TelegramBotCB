@@ -32,8 +32,13 @@ jobs:
           scp -i ~/.ssh/id_rsa .env $SERVER_USER@$SERVER_HOST:/home/belnitskii/TelegramBotCB/.env
 
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
-          cd /home/belnitskii/TelegramBotCB
+          
+          git fetch origin
+          git reset --hard origin/main
+          git pull origin main
+
           mvn clean package -DskipTests  # Пересобираем JAR-файл
+          
           docker-compose down || true
           docker-compose build --no-cache  # Пересобираем образ без кеша
           docker-compose up -d
