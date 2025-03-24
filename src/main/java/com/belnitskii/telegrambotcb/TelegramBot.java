@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
@@ -23,6 +24,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.swing.text.html.HTML;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -106,7 +108,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.equals("Другая Валюта")) {
                 sendCharCodeMenu(chatId, messageId, callbackData);
             }
-            if (callbackData.endsWith("_TODAY")) {
+            if (callbackData.endsWith("_ACTUAL")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
                 rate = currencyService.getCurrencyRate(currency);
@@ -184,7 +186,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Сегодня").callbackData(currency + "_TODAY").build());
+        row.add(InlineKeyboardButton.builder().text("Актуальный").callbackData(currency + "_ACTUAL").build());
         row.add(InlineKeyboardButton.builder().text("За неделю").callbackData(currency + "_WEEK").build());
         buttons.add(row);
 
@@ -317,6 +319,7 @@ public class TelegramBot extends TelegramLongPollingBot {
      */
     private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
         EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setParseMode(ParseMode.HTML);
         editMessageText.setChatId(chatId.toString());
         editMessageText.setMessageId(messageId);
         editMessageText.setText(newText);
@@ -376,6 +379,8 @@ public class TelegramBot extends TelegramLongPollingBot {
      */
     private void sendMessage(long chatId, String text) {
         SendMessage message = new SendMessage();
+        message.enableMarkdown(true);
+        message.setParseMode(ParseMode.HTML);
         message.setChatId(chatId);
         message.setText(text);
         try {

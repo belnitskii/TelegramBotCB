@@ -51,12 +51,46 @@ public class CurrencyService {
             Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
             JsonNode dateTimeNode = rootNode.path("Date");
             LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
+            StringBuilder stringBuilder = new StringBuilder();
+            String rate = MessageFormat.format("<code>1 {0} = {1} RUB | {2}.{3}</code>",
+                    valuta.getCharCode(),
+                    valuta.getValue().toString(),
+                    dateUpdated.getDayOfMonth(),
+                    String.format("%02d", dateUpdated.getMonthValue()));
             logger.info("Успешно десериализовал JSON для {}", charCode);
-            String rate = MessageFormat.format("Курс {0} к RUB {1} \n1 {2} = {3} RUB", valuta.getCharCode(), dateUpdated, valuta.getCharCode(), valuta.getValue());
             logger.info(rate);
-            return rate;
+            String rate2 = getCurrencyRateXML(charCode);
+            stringBuilder.append(rate).append("\n").append(rate2);
+            return stringBuilder.toString();
         } catch (IOException e) {
             logger.error("Не удалось десериаллизовать JSON и получить курс для {}", charCode);
+            return null;
+        }
+    }
+
+    public String getCurrencyRateXML(String charCodeName) {
+        try {
+            URL url = getUrlXmlDay(charCodeName);
+            String splitResponseUrl = splitResponseUrl(url);
+            XmlMapper xmlMapper = new XmlMapper();
+            xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
+            logger.info("Успешно десериализовал XML для {}", charCodeName);
+            StringBuilder stringBuilder = new StringBuilder();
+
+            stringBuilder
+                    .append("<code>1 ")
+                    .append(charCodeName)
+                    .append(" = ")
+                    .append(String.format("%.4f", valCurs.getRecords().getLast().getValue()))
+                    .append(" RUB | ")
+                    .append(valCurs.getRecords().getLast().getDate().substring(0, 5))
+                    .append("</code>\n");
+
+            logger.info(stringBuilder.toString());
+            return stringBuilder.toString();
+        } catch (IOException | ParseException e) {
+            logger.error("Не удалось десериаллизовать XML и получить курс {} за неделю", charCodeName);
             return null;
         }
     }
@@ -78,10 +112,16 @@ public class CurrencyService {
             ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
             logger.info("Успешно десериализовал XML для {}", charCodeName);
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.append("Курс ").append(charCodeName).append(" к RUB за ").append(valCurs.getRecords().size()).append(" дней.\n(");
-            stringBuilder.append(valCurs.getRecords().getLast().getDate()).append(" — ").append(valCurs.getRecords().getFirst().getDate()).append(")\n\n");
-            for (int i = valCurs.getRecords().size() - 1; i >= 0; i--) {
-                stringBuilder.append("1 ").append(charCodeName).append(" = ").append(String.format("%.2f", valCurs.getRecords().get(i).getValue())).append(" RUB\n");
+            int limit = 7;
+            for (int i = valCurs.getRecords().size() - 1; i >= 0 && limit > 0; i--, limit--) {
+                stringBuilder
+                        .append("<code>1 ")
+                        .append(charCodeName)
+                        .append(" = ")
+                        .append(String.format("%.4f", valCurs.getRecords().get(i).getValue()))
+                        .append(" RUB | ")
+                        .append(valCurs.getRecords().get(i).getDate().substring(0, 5))
+                        .append("</code>\n");
             }
             logger.info(stringBuilder.toString());
             return stringBuilder.toString();
@@ -125,8 +165,26 @@ public class CurrencyService {
         try {
             logger.info("Получаю url для {}", charCode);
             String id = ValutaCharCode.valueOf(charCode).getCode();
+            String dateNow = LocalDate.now().plusDays(5).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String dateBeforeWeek = LocalDate.now().minusDays(11).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            URL urlXml = new URL("https://www.cbr.ru/scripts/XML_dynamic.asp?" +
+                    "date_req1=" + dateBeforeWeek +
+                    "&date_req2=" + dateNow +
+                    "&VAL_NM_RQ=" + id);
+            logger.info("URL {} – {}", charCode, urlXml);
+            return urlXml;
+        } catch (MalformedURLException e){
+            logger.error("Не удалось получить url для XML ", e);
+            return null;
+        }
+    }
+
+    private URL getUrlXmlDay(String charCode) {
+        try {
+            logger.info("Получаю url для {}", charCode);
+            String id = ValutaCharCode.valueOf(charCode).getCode();
             String dateNow = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-            String dateBeforeWeek = LocalDate.now().minusDays(8).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String dateBeforeWeek = LocalDate.now().minusDays(5).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             URL urlXml = new URL("https://www.cbr.ru/scripts/XML_dynamic.asp?" +
                     "date_req1=" + dateBeforeWeek +
                     "&date_req2=" + dateNow +
