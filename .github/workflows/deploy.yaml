@@ -33,6 +33,7 @@ jobs:
 
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
           
+          cd /home/belnitskii/TelegramBotCB
           git fetch origin
           git reset --hard origin/main
           git pull origin main
