@@ -12,3 +12,7 @@ EXPOSE 8080
 
 # Команда для запуска приложения
 ENTRYPOINT ["java", "-jar", "app.jar"]
+
+WORKDIR /app
+COPY --chown=appuser:appgroup target/TelegramBotCB-0.0.1-SNAPSHOT.jar app.jar
+CMD ["java", "-jar", "app.jar"]

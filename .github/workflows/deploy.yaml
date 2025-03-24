@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy to server
+      - name: Build and Deploy
         env:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
@@ -21,18 +21,10 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           BOT_NAME: ${{ secrets.BOT_NAME }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
-
-          echo "BOT_TOKEN=$BOT_TOKEN" > .env
-          echo "BOT_NAME=$BOT_NAME" >> .env
-
-          scp -i ~/.ssh/id_rsa .env $SERVER_USER@$SERVER_HOST:/home/belnitskii/TelegramBotCB/.env
-
           ssh -i ~/.ssh/id_rsa $SERVER_USER@$SERVER_HOST << 'EOF'
           cd /home/belnitskii/TelegramBotCB
+          mvn clean package -DskipTests  # Пересобираем JAR-файл
           docker-compose down || true
-          docker-compose up -d --build
+          docker-compose build --no-cache  # Пересобираем образ без кеша
+          docker-compose up -d
           EOF
