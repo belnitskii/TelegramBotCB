@@ -8,53 +8,53 @@ class CurrencyServiceTest {
     private final CurrencyService currencyService = new CurrencyService();
 
     @Test
-    void getCurrencyRate_byNull() {
-        assertNull(currencyService.getCurrencyRate(null));
+    void getLatestRate_byNull() {
+        assertNull(currencyService.getLatestRate(null));
     }
 
     @Test
-    void getCurrencyRate_byUnexpectedCharCode() {
-        assertNull(currencyService.getCurrencyRate("$#!%"));
+    void getLatestRate_byUnexpectedCharCode() {
+        assertNull(currencyService.getLatestRate("$#!%"));
     }
 
     @Test
-    void getCurrencyRate_Success() {
-        assertFalse(currencyService.getCurrencyRate("USD").isEmpty());
+    void getLatestRate_Success() {
+        assertFalse(currencyService.getLatestRate("USD").isEmpty());
     }
 
     @Test
-    void getWeekCurrencyRate_byNull() {
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> currencyService.getWeekChartCurrencyRate(null));
+    void getLatestRate_ByDiapozon_byNull() {
+        NullPointerException exception = assertThrows(NullPointerException.class, () -> currencyService.getChartRatesFromNow(null, 7));
         assertEquals("Name is null", exception.getMessage());
     }
 
     @Test
-    void getWeekCurrencyRate_byUnexpectedCharCode() {
+    void getLatestRate_ByDiapozon_byUnexpectedCharCode() {
         String unexpectedCharCode = "$#!%";
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getWeekCurrencyRate(unexpectedCharCode)));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getRatesFromNow(unexpectedCharCode, 7)));
         assertEquals("No enum constant com.belnitskii.telegrambotcb.constant.ValutaCharCode." + unexpectedCharCode, exception.getMessage());
     }
 
     @Test
-    void getWeekCurrencyRate_Success() {
-        assertFalse(currencyService.getWeekCurrencyRate("USD").isEmpty());
+    void getLatestRate_ByDiapozon_Success() {
+        assertFalse(currencyService.getRatesFromNow("USD", 7).isEmpty());
     }
 
     @Test
-    void getWeekChartCurrencyRate_byNull() {
-        NullPointerException exception = assertThrows(NullPointerException.class, () -> currencyService.getWeekChartCurrencyRate(null));
+    void getChartCurrencyRate_ByPeriodFromNow_byNull() {
+        NullPointerException exception = assertThrows(NullPointerException.class, () -> currencyService.getChartRatesFromNow(null, 7));
         assertEquals("Name is null", exception.getMessage());
     }
 
     @Test
-    void getWeekChartCurrencyRate_byUnexpectedCharCode() {
+    void getChartCurrencyRate_ByPeriodFromNow_byUnexpectedCharCode() {
         String unexpectedCharCode = "$#!%";
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getWeekChartCurrencyRate(unexpectedCharCode)));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getChartRatesFromNow(unexpectedCharCode, 7)));
         assertEquals("No enum constant com.belnitskii.telegrambotcb.constant.ValutaCharCode." + unexpectedCharCode, exception.getMessage());
     }
 
     @Test
-    void getWeekChartCurrencyRate_Success() {
-        assertTrue(currencyService.getWeekChartCurrencyRate("USD").isFile());
+    void getChartCurrencyRate_ByPeriodFromNow_Success() {
+        assertTrue(currencyService.getChartRatesFromNow("USD", 7).isFile());
     }
 }

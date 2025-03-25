@@ -24,7 +24,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import javax.swing.text.html.HTML;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,7 +110,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_ACTUAL")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                rate = currencyService.getCurrencyRate(currency);
+                rate = currencyService.getLatestRate(currency);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_WEEK")) {
@@ -120,12 +119,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_TEXT")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                rate = currencyService.getWeekCurrencyRate(currency);
+                rate = currencyService.getRatesFromNow(currency, 7);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_CHART")) {
                 String currency = callbackData.split("_")[0];
-                File chart = currencyService.getWeekChartCurrencyRate(currency);
+                File chart = currencyService.getChartRatesFromNow(currency, 7);
                 sendChart(String.valueOf(chatId), chart);
                 editMessageWithRate(chatId, messageId, "Вот ваш график");
             }
