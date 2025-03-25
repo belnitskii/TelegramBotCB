@@ -39,8 +39,9 @@ public class ChartUtil {
             maxValue = (int) Math.max(maxValue, record.getValue());
         }
 
-        double lowerBound = Math.floor(minValue / 2.5) * 2.5;
-        double upperBound = Math.ceil(maxValue / 2.5) * 2.5;
+        double padding = 1.0; // Добавляем запас
+        double lowerBound = Math.floor(minValue / 2.5) * 2.5 - padding;
+        double upperBound = Math.ceil(maxValue / 2.5) * 2.5 + padding;
         // Создаем график (убираем легенду)
         JFreeChart chart = ChartFactory.createLineChart(
                 MessageFormat.format("{0} ({1} — {2})", charCodeName, recordList.getFirst().getDate(), recordList.getLast().getDate()),

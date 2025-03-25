@@ -1,14 +1,9 @@
 package com.belnitskii.telegrambotcb.service;
 
-import com.belnitskii.telegrambotcb.config.ApiUrls;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.model.Record;
 import com.belnitskii.telegrambotcb.model.ValCurs;
-import com.belnitskii.telegrambotcb.model.Valuta;
-import com.belnitskii.telegrambotcb.util.DateTimeUtil;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -45,35 +39,46 @@ public class CurrencyService {
      * @throws ParseException Если возникла ошибка при парсинге данных.
      */
     public String getLatestRate(String charCode) {
+        List<Record> recordList = getRecordListFromNow(charCode, 1);
+        System.out.println(recordList.getLast().getDate());
+        DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        LocalDate lastDateRecord = LocalDate.parse(recordList.getLast().getDate(), FORMATTER);
+        if (LocalDate.now().plusDays(1).isEqual(lastDateRecord)) {
+            return getRatesFromNow(charCode, 2);
+        }
+        return getRatesFromNow(charCode, 1);
+    }
+
+    public String getRatesFromNow(String charCodeName, int limit) {
         try {
-            String splitResponseUrl = splitResponseUrl(new URL(ApiUrls.CURRENCY_RATES_URL));
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode rootNode = mapper.readTree(splitResponseUrl);
-            JsonNode locatedNoteValuta = rootNode.path("Valute").path(charCode);
-            Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
-            JsonNode dateTimeNode = rootNode.path("Date");
-            LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
+            List<Record> recordList = getRecordListFromNow(charCodeName, limit);
             StringBuilder stringBuilder = new StringBuilder();
-            String rate = MessageFormat.format("<code>{2}.{3} | 1 {0} = {1} RUB</code>",
-                    valuta.getCharCode(),
-                    valuta.getValue().toString(),
-                    dateUpdated.getDayOfMonth(),
-                    String.format("%02d", dateUpdated.getMonthValue()));
-            logger.info("Успешно десериализовал JSON для {}", charCode);
-            logger.info(rate);
-            String rate2 = "";
-            if (dateUpdated.getDayOfMonth() != LocalDate.now().getDayOfMonth()){
-                rate2 = getRatesFromNow(charCode,1);
+
+            stringBuilder.append(getHandler());
+
+            for (int i = recordList.size() - 1; i >= 1; i--) {
+                double delta = recordList.get(i).getValue() - recordList.get(i - 1).getValue();
+                String date = recordList.get(i).getDate().substring(0, 5);
+                String value = String.format("%.4f", recordList.get(i).getValue()); // Изменил на 2 знака после запятой
+                String deltaStr = String.format("%s%.2f", delta >= 0.0 ? "+" : "", delta);
+
+                stringBuilder.append("<code>")
+                        .append(String.format("%-6s", date))
+                        .append(" |    ")
+                        .append(String.format("%-11s", value))
+                        .append(" | ")
+                        .append(String.format("%-6s", deltaStr))
+                        .append("</code>\n");
             }
-            stringBuilder.append(rate).append("\n").append(rate2);
+            logger.info(stringBuilder.toString());
             return stringBuilder.toString();
-        } catch (IOException e) {
-            logger.error("Не удалось десериаллизовать JSON и получить курс для {}", charCode);
+        } catch (ParseException e) {
+            logger.error("Не удалось десериализовать XML и получить курс {} за неделю", charCodeName);
             return null;
         }
     }
 
-    public String getRatesFromNow(String charCodeName, int limit) {
+    private List<Record> getRecordListFromNow(String charCodeName, int limit) {
         try {
             URL url = getUrlXmlMonth(charCodeName);
             String splitResponseUrl = splitResponseUrl(url);
@@ -81,26 +86,29 @@ public class CurrencyService {
             xmlMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             ValCurs valCurs = xmlMapper.readValue(splitResponseUrl, ValCurs.class);
             logger.info("Успешно десериализовал XML для {}", charCodeName);
-            StringBuilder stringBuilder = new StringBuilder();
-            List<Record> recordList = valCurs.getRecords().subList(Math.max(0, valCurs.getRecords().size() - limit), valCurs.getRecords().size());
-            for (int i = recordList.size() - 1; i >= 0 ; i--) {
-                stringBuilder
-                        .append("<code>")
-                        .append(recordList.get(i).getDate().substring(0, 5))
-                        .append("| 1 ")
-                        .append(charCodeName)
-                        .append(" = ")
-                        .append(String.format("%.4f", recordList.get(i).getValue()))
-                        .append(" RUB</code>\n");
-            }
-            logger.info(stringBuilder.toString());
-            return stringBuilder.toString();
-        } catch (IOException | ParseException e) {
-            logger.error("Не удалось десериаллизовать XML и получить курс {} за неделю", charCodeName);
+
+            List<Record> recordList = valCurs.getRecords().subList(
+                    Math.max(0, valCurs.getRecords().size() - (limit + 1)),
+                    valCurs.getRecords().size()
+            );
+            return recordList;
+        } catch (IOException e) {
+            logger.error("Не удалось десериализовать XML и получить курс {} за неделю", charCodeName);
             return null;
+
         }
     }
 
+    private String getHandler() {
+        String handler = "<code> " +
+                String.format("%-6s", "📅") +  // Эмодзи + 1 пробел
+                "|    " +
+                String.format("%-11s", "💰 EUR") + // Эмодзи + EUR + 2 пробела
+                " | " +
+                String.format("%-6s", "📈 Δ") + // Эмодзи + Δ + 1 пробел
+                "</code>\n";
+        return handler;
+    }
 
     /**
      * Получает график курса валюты за последнюю неделю по её символу (charCodeName).
