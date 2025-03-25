@@ -1,9 +1,14 @@
 package com.belnitskii.telegrambotcb.service;
 
+import com.belnitskii.telegrambotcb.config.ApiUrls;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.model.Record;
 import com.belnitskii.telegrambotcb.model.ValCurs;
+import com.belnitskii.telegrambotcb.model.Valuta;
+import com.belnitskii.telegrambotcb.util.DateTimeUtil;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,14 +45,48 @@ public class CurrencyService {
      */
     public String getLatestRate(String charCode) {
         List<Record> recordList = getRecordListFromNow(charCode, 1);
-        System.out.println(recordList.getLast().getDate());
         DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         LocalDate lastDateRecord = LocalDate.parse(recordList.getLast().getDate(), FORMATTER);
-        if (LocalDate.now().plusDays(1).isEqual(lastDateRecord)) {
+
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+
+
+        //Если в XML есть курс на завтра — возвращаем курс за два дня (сегодня + завтра)
+        if (tomorrow.isEqual(lastDateRecord)) {
             return getRatesFromNow(charCode, 2);
         }
+
+        //Проверяем JSON, если курс на завтрашний день — добавляем его к сегодняшнему курсу из XML
+        String jsonRate = getLatestRateJson(charCode);
+        if (jsonRate != null && jsonRate.equals(tomorrow.toString().substring(0, 5))) {
+            return getRatesFromNow(charCode, 1) + jsonRate;
+        }
+
+        //Возвращаем курс на сегодня
         return getRatesFromNow(charCode, 1);
     }
+
+    private String getLatestRateJson(String charCode) {
+        try {
+            String splitResponseUrl = splitResponseUrl(new URL(ApiUrls.CURRENCY_RATES_URL));
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode rootNode = mapper.readTree(splitResponseUrl);
+            JsonNode locatedNoteValuta = rootNode.path("Valute").path(charCode);
+            Valuta valuta = mapper.readValue(locatedNoteValuta.toString(), Valuta.class);
+            LocalDate dateUpdated = DateTimeUtil.toLocalDate(rootNode.path("Date").asText());
+
+            String formattedRate = formatRate(dateUpdated, valuta.getValue(), 0);
+
+            logger.info("Успешно десериализовал JSON для {}: \n{}", charCode, formattedRate);
+            logger.info(formattedRate);
+            return formattedRate;
+        } catch (IOException e) {
+            logger.error("Не удалось десериаллизовать JSON и получить курс для {}", charCode);
+            return null;
+        }
+    }
+
+
 
     public String getRatesFromNow(String charCodeName, int limit) {
         try {
@@ -173,5 +212,13 @@ public class CurrencyService {
             result.append(scanner.nextLine());
         }
         return result.toString();
+    }
+
+    private String formatRate(LocalDate date, Double rate, double delta) {
+        return String.format("<code>%-6s | %11.4f | %+6.2f</code>\n", formatDate(date), rate, delta);
+    }
+
+    private String formatDate(LocalDate date) {
+        return date.format(DateTimeFormatter.ofPattern("dd.MM"));
     }
 }
