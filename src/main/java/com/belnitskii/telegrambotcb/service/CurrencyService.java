@@ -54,7 +54,7 @@ public class CurrencyService {
             JsonNode dateTimeNode = rootNode.path("Date");
             LocalDate dateUpdated = DateTimeUtil.toLocalDate(dateTimeNode.toString());
             StringBuilder stringBuilder = new StringBuilder();
-            String rate = MessageFormat.format("<code>1 {0} = {1} RUB | {2}.{3}</code>",
+            String rate = MessageFormat.format("<code>{2}.{3} | 1 {0} = {1} RUB</code>",
                     valuta.getCharCode(),
                     valuta.getValue().toString(),
                     dateUpdated.getDayOfMonth(),
@@ -85,13 +85,13 @@ public class CurrencyService {
             List<Record> recordList = valCurs.getRecords().subList(Math.max(0, valCurs.getRecords().size() - limit), valCurs.getRecords().size());
             for (int i = recordList.size() - 1; i >= 0 ; i--) {
                 stringBuilder
-                        .append("<code>1 ")
+                        .append("<code>")
+                        .append(recordList.get(i).getDate().substring(0, 5))
+                        .append("| 1 ")
                         .append(charCodeName)
                         .append(" = ")
                         .append(String.format("%.4f", recordList.get(i).getValue()))
-                        .append(" RUB | ")
-                        .append(recordList.get(i).getDate().substring(0, 5))
-                        .append("</code>\n");
+                        .append(" RUB</code>\n");
             }
             logger.info(stringBuilder.toString());
             return stringBuilder.toString();
