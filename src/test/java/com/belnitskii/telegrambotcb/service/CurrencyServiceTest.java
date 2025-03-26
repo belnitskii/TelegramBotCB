@@ -8,36 +8,36 @@ class CurrencyServiceTest {
     private final CurrencyService currencyService = new CurrencyService();
 
     @Test
-    void getLatestRate_byNull() {
-        assertNull(currencyService.getLatestRate(null));
+    void getLatestRates_byNull() {
+        assertNull(currencyService.getLatestRates(null));
     }
 
     @Test
-    void getLatestRate_byUnexpectedCharCode() {
-        assertNull(currencyService.getLatestRate("$#!%"));
+    void getLatestRates_byUnexpectedCharCode() {
+        assertNull(currencyService.getLatestRates("$#!%"));
     }
 
     @Test
-    void getLatestRate_Success() {
-        assertFalse(currencyService.getLatestRate("USD").isEmpty());
+    void getLatestRates_Success() {
+        assertFalse(currencyService.getLatestRates("USD").isEmpty());
     }
 
     @Test
-    void getLatestRate_ByDiapozon_byNull() {
+    void getLatestRates_ByDiapozon_byNull() {
         NullPointerException exception = assertThrows(NullPointerException.class, () -> currencyService.getChartRatesFromNow(null, 7));
         assertEquals("Name is null", exception.getMessage());
     }
 
     @Test
-    void getLatestRate_ByDiapozon_byUnexpectedCharCode() {
+    void getLatestRates_ByDiapozon_byUnexpectedCharCode() {
         String unexpectedCharCode = "$#!%";
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getRatesFromNow(unexpectedCharCode, 7)));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> assertNull(currencyService.getRatesForPeriod(unexpectedCharCode, 7)));
         assertEquals("No enum constant com.belnitskii.telegrambotcb.constant.ValutaCharCode." + unexpectedCharCode, exception.getMessage());
     }
 
     @Test
-    void getLatestRate_ByDiapozon_Success() {
-        assertFalse(currencyService.getRatesFromNow("USD", 7).isEmpty());
+    void getLatestRates_ByDiapozon_Success() {
+        assertFalse(currencyService.getRatesForPeriod("USD", 7).isEmpty());
     }
 
     @Test

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 /**
@@ -13,6 +14,11 @@ import java.time.format.DateTimeParseException;
  */
 public class DateTimeUtil {
     private static final Logger logger = LoggerFactory.getLogger(DateTimeUtil.class);
+
+    public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    public static final DateTimeFormatter CB_DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    public static final DateTimeFormatter SHORT_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM");
+
 
     /**
      * Преобразует строковое представление даты и времени в объект {@link LocalDate}.
@@ -36,5 +42,9 @@ public class DateTimeUtil {
             logger.error("Ошибка преобразования даты: ", e);
             return null;
         }
+    }
+
+    public static String formatDate(LocalDate date) {
+        return date.format(SHORT_DATE_FORMATTER);
     }
 }

@@ -110,7 +110,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_ACTUAL")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                rate = currencyService.getLatestRate(currency);
+                rate = currencyService.getLatestRates(currency);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_WEEK")) {
@@ -119,7 +119,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.endsWith("_TEXT")) {
                 String currency = callbackData.split("_")[0];
                 String rate;
-                rate = currencyService.getRatesFromNow(currency, 7);
+                rate = currencyService.getRatesForPeriod(currency, 7);
                 editMessageWithRate(chatId, messageId, rate);
             }
             if (callbackData.endsWith("_CHART")) {
