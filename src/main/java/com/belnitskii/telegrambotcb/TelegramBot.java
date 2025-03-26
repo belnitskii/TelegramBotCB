@@ -79,22 +79,25 @@ public class TelegramBot extends TelegramLongPollingBot {
             logger.info("Сообщение от пользователя {} (ID: {}): {}", update.getMessage().getFrom().getFirstName(), update.getMessage().getChatId(), update.getMessage().getText());
 
             switch (messageText) {
-                case "Курс валюты":
+                case "/get", "Get rate":
                     startCommandReceived(chatId);
                     break;
-                case "/help", "Помощь":
-                    sendMessage(chatId, "Этот бот показывает курсы валют. Доступные команды:\n/help - помощь\n/start - старт\n/about - о программе");
+                case "/help", "Help":
+                    sendMessage(chatId, "This bot shows exchange rates. Available commands:\n" +
+                            "/help - help\n" +
+                            "/start - start\n" +
+                            "/about - about the program");
                     break;
-                case "/about", "О программе":
-                    sendMessage(chatId, "Что-то о программе, потом добавлю");
+                case "/about", "About program":
+                    sendMessage(chatId, "Something about the program, I'll add it later))");
                     break;
-                case "/start":
+                case "/start", "Start bot":
                     setBotCommands();
-                    sendMessageWithKeyboard(chatId, "Здравствуйте " + update.getMessage().getChat().getFirstName() + "! Я Telegram-бот, который показывает курсы валют.");
+                    sendMessageWithKeyboard(chatId, "Hello " + update.getMessage().getChat().getFirstName() + "! I am a Telegram bot that shows exchange rates.");
                     startCommandReceived(chatId);
                     break;
                 default:
-                    sendMessage(chatId, "Неизвестная команда. Введите /help для получения списка доступных команд.");
+                    sendMessage(chatId, "Unknown command. Type /help to get a list of available commands..");
             }
         } else if (update.hasCallbackQuery()) {
             logger.info("Пользователь {} (ID: {}):  {}",update.getCallbackQuery().getFrom().getFirstName(), update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getData());
@@ -104,7 +107,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (ValutaCharCode.contain(callbackData)) {
                 sendTimeFrameMenu(chatId, messageId, callbackData);
             }
-            if (callbackData.equals("Другая Валюта")) {
+            if (callbackData.equals("Other Currency")) {
                 sendCharCodeMenu(chatId, messageId, callbackData);
             }
             if (callbackData.endsWith("_ACTUAL")) {
@@ -126,7 +129,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 String currency = callbackData.split("_")[0];
                 File chart = currencyService.getChartRatesFromNow(currency, 7);
                 sendChart(String.valueOf(chatId), chart);
-                editMessageWithRate(chatId, messageId, "Вот ваш график");
+                editMessageWithRate(chatId, messageId, "Chart of " + currency);
             }
         }
     }
@@ -139,7 +142,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void startCommandReceived(Long chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
-        message.setText("Выберите валюту:");
+        message.setText("Select currency:");
         message.setReplyMarkup(createCurrencyMenu());
 
         try {
@@ -160,7 +163,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
-        editMessage.setText("Выберите период для " + currency + ":");
+        editMessage.setText("Choose period for " + currency + ":");
         editMessage.setReplyMarkup(createCharCodeMenu());
         try {
             execute(editMessage);
@@ -180,13 +183,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
-        editMessage.setText("Выберите период для " + currency + ":");
+        editMessage.setText("Select period for " + currency + ":");
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Актуальный").callbackData(currency + "_ACTUAL").build());
-        row.add(InlineKeyboardButton.builder().text("За неделю").callbackData(currency + "_WEEK").build());
+        row.add(InlineKeyboardButton.builder().text("Actual").callbackData(currency + "_ACTUAL").build());
+        row.add(InlineKeyboardButton.builder().text("Week").callbackData(currency + "_WEEK").build());
         buttons.add(row);
 
         keyboardMarkup.setKeyboard(buttons);
@@ -210,14 +213,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
-        editMessage.setText("Выберите удобный вариант отображения " + currency.split("_")[0] + ":");
+        editMessage.setText("Select display option " + currency.split("_")[0] + ":");
 
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
 
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Текст").callbackData(currency + "_TEXT").build());
-        row.add(InlineKeyboardButton.builder().text("График").callbackData(currency + "_CHART").build());
+        row.add(InlineKeyboardButton.builder().text("Text").callbackData(currency + "_TEXT").build());
+        row.add(InlineKeyboardButton.builder().text("Chart").callbackData(currency + "_CHART").build());
         buttons.add(row);
 
         keyboardMarkup.setKeyboard(buttons);
@@ -275,8 +278,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         row2.add(InlineKeyboardButton.builder()
-                .text("Другая Валюта")
-                .callbackData("Другая Валюта")
+                .text("Other Currency")
+                .callbackData("Other Currency")
                 .build());
         buttons.add(row2);
 
@@ -297,12 +300,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboardRows = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("Курс валюты"));
+        row1.add(new KeyboardButton("Get rate"));
         keyboardRows.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("Помощь"));
-        row2.add(new KeyboardButton("О программе"));
+        row2.add(new KeyboardButton("Help"));
+        row2.add(new KeyboardButton("About program"));
         keyboardRows.add(row2);
 
         keyboardMarkup.setKeyboard(keyboardRows);
@@ -337,9 +340,10 @@ public class TelegramBot extends TelegramLongPollingBot {
      */
     private void setBotCommands() {
         List<BotCommand> commands = List.of(
-                new BotCommand("/start", "Запуск бота"),
-                new BotCommand("/help", "Помощь"),
-                new BotCommand("/about", "О программе")
+                new BotCommand("/get", "Get rate"),
+                new BotCommand("/start", "Start bot"),
+                new BotCommand("/help", "Help"),
+                new BotCommand("/about", "About program")
         );
 
         SetMyCommands setMyCommands = new SetMyCommands(commands, new BotCommandScopeDefault(), null);
