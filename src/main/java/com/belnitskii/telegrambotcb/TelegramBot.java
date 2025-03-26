@@ -8,10 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
+import org.telegram.telegrambots.meta.api.methods.stickers.SetStickerSetThumb;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -25,8 +29,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Основной класс Telegram-бота, обрабатывающий входящие сообщения и команды.
@@ -62,6 +66,38 @@ public class TelegramBot extends TelegramLongPollingBot {
         return botConfig.getToken();
     }
 
+    private void handleCommand(Update update) {
+        String messageText = update.getMessage().getText().toLowerCase();
+        long chatId = update.getMessage().getChatId();
+
+        logger.info("Сообщение от пользователя {} (ID: {}): {}", update.getMessage().getFrom().getFirstName(), update.getMessage().getChatId(), update.getMessage().getText());
+
+        Map<String, Runnable> commands = new HashMap<>();
+        commands.put("/get", () -> startCommandReceived(chatId));
+        commands.put("get rate", () -> startCommandReceived(chatId));
+        commands.put("/help", () -> sendHelpMessage(chatId));
+        commands.put("help", () -> sendHelpMessage(chatId));
+        commands.put("/about", () -> sendMessage(chatId, "Something about the program, I'll add it later))"));
+        commands.put("about program", () -> sendMessage(chatId, "Something about the program, I'll add it later))"));
+        commands.put("/start", () -> startBot(chatId, update));
+        commands.put("start bot", () -> startBot(chatId, update));
+
+        commands.getOrDefault(messageText, () -> sendMessage(chatId, "Unknown command. Type /help to get a list of available commands..")).run();
+    }
+    private void sendHelpMessage(long chatId) {
+        sendMessage(chatId, "This bot shows exchange rates. Available commands:\n" +
+                "/help - help\n" +
+                "/start - start\n" +
+                "/get - get rate\n" +
+                "/about - about the program");
+    }
+
+    private void startBot(long chatId, Update update) {
+        setBotCommands();
+        sendMessageWithKeyboard(chatId, "Hello " + update.getMessage().getChat().getFirstName() + "! I am a Telegram bot that shows exchange rates.");
+        startCommandReceived(chatId);
+    }
+
     /**
      * Обрабатывает входящие обновления от Telegram API.
      * <p>
@@ -74,63 +110,46 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-            logger.info("Сообщение от пользователя {} (ID: {}): {}", update.getMessage().getFrom().getFirstName(), update.getMessage().getChatId(), update.getMessage().getText());
-
-            switch (messageText) {
-                case "/get", "Get rate":
-                    startCommandReceived(chatId);
-                    break;
-                case "/help", "Help":
-                    sendMessage(chatId, "This bot shows exchange rates. Available commands:\n" +
-                            "/help - help\n" +
-                            "/start - start\n" +
-                            "/about - about the program");
-                    break;
-                case "/about", "About program":
-                    sendMessage(chatId, "Something about the program, I'll add it later))");
-                    break;
-                case "/start", "Start bot":
-                    setBotCommands();
-                    sendMessageWithKeyboard(chatId, "Hello " + update.getMessage().getChat().getFirstName() + "! I am a Telegram bot that shows exchange rates.");
-                    startCommandReceived(chatId);
-                    break;
-                default:
-                    sendMessage(chatId, "Unknown command. Type /help to get a list of available commands..");
-            }
+            handleCommand(update);
         } else if (update.hasCallbackQuery()) {
-            logger.info("Пользователь {} (ID: {}):  {}",update.getCallbackQuery().getFrom().getFirstName(), update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getData());
-            String callbackData = update.getCallbackQuery().getData();
-            Long chatId = update.getCallbackQuery().getMessage().getChatId();
-            Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
-            if (ValutaCharCode.contain(callbackData)) {
-                sendTimeFrameMenu(chatId, messageId, callbackData);
-            }
-            if (callbackData.equals("Other Currency")) {
-                sendCharCodeMenu(chatId, messageId, callbackData);
-            }
-            if (callbackData.endsWith("_ACTUAL")) {
-                String currency = callbackData.split("_")[0];
-                String rate;
-                rate = currencyService.getLatestRates(currency);
-                editMessageWithRate(chatId, messageId, rate);
-            }
-            if (callbackData.endsWith("_WEEK")) {
-                sendSecondTimeFrameMenu(chatId, messageId, callbackData);
-            }
-            if (callbackData.endsWith("_TEXT")) {
-                String currency = callbackData.split("_")[0];
-                String rate;
-                rate = currencyService.getRatesForPeriod(currency, 7);
-                editMessageWithRate(chatId, messageId, rate);
-            }
-            if (callbackData.endsWith("_CHART")) {
-                String currency = callbackData.split("_")[0];
-                File chart = currencyService.getChartRatesFromNow(currency, 7);
-                sendChart(String.valueOf(chatId), chart);
-                editMessageWithRate(chatId, messageId, "Chart of " + currency);
-            }
+            handleCallback(update);
+        }
+    }
+
+    private void handleCallback(Update update) {
+        String callbackData = update.getCallbackQuery().getData();
+        Long chatId = update.getCallbackQuery().getMessage().getChatId();
+        Integer messageId = update.getCallbackQuery().getMessage().getMessageId();
+
+        logger.info("Callback от пользователя {} (ID: {}): {}",
+                update.getCallbackQuery().getFrom().getFirstName(), chatId, callbackData);
+
+        if (ValutaCharCode.contain(callbackData)) {
+            sendTimeFrameMenu(chatId, messageId, callbackData);
+        }
+        if (callbackData.equals("Other Currency")) {
+            sendCharCodeMenu(chatId, messageId, callbackData);
+        }
+        if (callbackData.endsWith("_ACTUAL")) {
+            String currency = callbackData.split("_")[0];
+            String rate;
+            rate = currencyService.getLatestRates(currency);
+            editMessageWithRate(chatId, messageId, rate);
+        }
+        if (callbackData.endsWith("_WEEK")) {
+            sendSecondTimeFrameMenu(chatId, messageId, callbackData);
+        }
+        if (callbackData.endsWith("_TEXT")) {
+            String currency = callbackData.split("_")[0];
+            String rate;
+            rate = currencyService.getRatesForPeriod(currency, 7);
+            editMessageWithRate(chatId, messageId, rate);
+        }
+        if (callbackData.endsWith("_CHART")) {
+            String currency = callbackData.split("_")[0];
+            File chart = currencyService.getChartRatesFromNow(currency, 7);
+            sendChart(String.valueOf(chatId), chart);
+            editMessageWithRate(chatId, messageId, "Chart of " + currency);
         }
     }
 
@@ -144,12 +163,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(chatId.toString());
         message.setText("Select currency:");
         message.setReplyMarkup(createCurrencyMenu());
-
-        try {
-            execute(message);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения startCommandReceived", e);
-        }
+        executeSafely(message);
     }
 
     /**
@@ -165,11 +179,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessage.setMessageId(messageId);
         editMessage.setText("Choose period for " + currency + ":");
         editMessage.setReplyMarkup(createCharCodeMenu());
-        try {
-            execute(editMessage);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения sendCharCodeMenu", e);
-        }
+        executeSafely(editMessage);
     }
 
     /**
@@ -194,12 +204,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(buttons);
         editMessage.setReplyMarkup(keyboardMarkup);
-
-        try {
-            execute(editMessage);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения sendTimeFrameMenu", e);
-        }
+        executeSafely(editMessage);
     }
 
     /**
@@ -225,12 +230,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(buttons);
         editMessage.setReplyMarkup(keyboardMarkup);
-
-        try {
-            execute(editMessage);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения sendSecondTimeFrameMenu", e);
-        }
+        executeSafely(editMessage);
     }
 
     /**
@@ -240,18 +240,12 @@ public class TelegramBot extends TelegramLongPollingBot {
      */
     private InlineKeyboardMarkup createCharCodeMenu() {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-
-        for (ValutaCharCode charCode : ValutaCharCode.values()) {
-            InlineKeyboardButton button = InlineKeyboardButton.builder()
-                    .text(charCode.name() + " — " + charCode.getName())
-                    .callbackData(charCode.name())
-                    .build();
-            List<InlineKeyboardButton> list = new ArrayList<>();
-            list.add(button);
-            buttons.add(list);
-        }
-
+        List<List<InlineKeyboardButton>> buttons = Arrays.stream(ValutaCharCode.values())
+                .map(charCode -> List.of(InlineKeyboardButton.builder()
+                        .text(charCode.name() + " — " + charCode.getName())
+                        .callbackData(charCode.name())
+                        .build()))
+                .collect(Collectors.toList());
         keyboardMarkup.setKeyboard(buttons);
         return keyboardMarkup;
     }
@@ -325,11 +319,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessageText.setChatId(chatId.toString());
         editMessageText.setMessageId(messageId);
         editMessageText.setText(newText);
-        try {
-            execute(editMessageText);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения editMessageWithRate", e);
-        }
+        executeSafely(editMessageText);
     }
 
     /**
@@ -345,15 +335,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 new BotCommand("/help", "Help"),
                 new BotCommand("/about", "About program")
         );
-
         SetMyCommands setMyCommands = new SetMyCommands(commands, new BotCommandScopeDefault(), null);
-
-        try {
-            execute(setMyCommands);
-            logger.info("Команды установлены {}", commands);
-        } catch (Exception e) {
-            logger.error("Ошибка выполнения setBotCommands", e);
-        }
+        executeSafely(setMyCommands);
     }
 
     /**
@@ -366,12 +349,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendPhoto sendPhoto = new SendPhoto();
         sendPhoto.setChatId(chatId);
         sendPhoto.setPhoto(new InputFile(chart));
-
-        try {
-            execute(sendPhoto);
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения sendChart", e);
-        }
+        executeSafely(sendPhoto);
     }
 
     /**
@@ -386,11 +364,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setParseMode(ParseMode.HTML);
         message.setChatId(chatId);
         message.setText(text);
-        try {
-            execute(message);
-        } catch (Exception e) {
-            logger.error("Ошибка выполнения sendMessage", e);
-        }
+        executeSafely(message);
     }
 
     /**
@@ -406,11 +380,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(chatId);
         message.setText(text);
         message.setReplyMarkup(getReplyKeyboard());
+        executeSafely(message);
+    }
 
+    private void executeSafely(Object method) {
         try {
-            execute(message);
-        } catch (Exception e) {
-            logger.error("Ошибка выполнения sendMessageWithKeyboard", e);
+            switch (method) {
+                case BotApiMethod<?> botApiMethod -> execute(botApiMethod);
+                case SendPhoto sendPhoto -> execute(sendPhoto);
+                case SendSticker sendSticker -> execute(sendSticker);
+                case SendDocument sendDocument -> execute(sendDocument);
+                case null, default -> {
+                    assert method != null;
+                    logger.error("Неизвестный тип команды: {}", method.getClass().getSimpleName());
+                }
+            }
+        } catch (TelegramApiException e) {
+            logger.error("Ошибка выполнения команды: {}", method.getClass().getSimpleName(), e);
         }
     }
 }
