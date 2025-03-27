@@ -39,7 +39,7 @@ public class CurrencyService {
     private static final String TABLE_HEADER = "<code> " +
             String.format("%-6s", "📅") +  // Эмодзи + 1 пробел
             "|    " +
-            String.format("%-11s", "💰 EUR") + // Эмодзи + EUR + 2 пробела
+            String.format("%-11s", "💰 %s") + // Эмодзи + EUR + 2 пробела
             "| " +
             String.format("%-6s", "  📈Δ") + // Эмодзи + Δ + 1 пробел
             "</code>\n";
@@ -73,7 +73,7 @@ public class CurrencyService {
 
     public String getRatesForPeriod(String charCodeName, int limit) {
         List<Record> recordList = fetchRecordsFromNow(charCodeName, limit + 1);
-        StringBuilder stringBuilder = new StringBuilder().append(TABLE_HEADER);
+        StringBuilder stringBuilder = new StringBuilder().append(String.format(TABLE_HEADER, charCodeName));
         for (int i = recordList.size() - 1; i >= 1; i--) {
             double delta = recordList.get(i).getValue() - recordList.get(i - 1).getValue();
             stringBuilder.append(formatRate(LocalDate.parse(recordList.get(i).getDate(), DateTimeUtil.FORMATTER), recordList.get(i).getValue(), delta));
