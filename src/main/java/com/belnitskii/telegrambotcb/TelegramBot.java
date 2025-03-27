@@ -163,16 +163,15 @@ public class TelegramBot extends Executor {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
+        editMessage.setParseMode(ParseMode.HTML);
+
         return editMessage;
     }
 
     private void editMessageWithRate(Long chatId, Integer messageId, String newText) {
-        EditMessageText editMessageText = new EditMessageText();
-        editMessageText.setChatId(chatId.toString());
-        editMessageText.setParseMode(ParseMode.HTML);
-        editMessageText.setMessageId(messageId);
-        editMessageText.setText(newText);
-        executeSafely(editMessageText);
+        EditMessageText editMessage = getEditMessageText(chatId, messageId);
+        editMessage.setText(newText);
+        executeSafely(editMessage);
     }
 
     private void sendCharCodeMenu(Long chatId, Integer messageId, String currency) {
