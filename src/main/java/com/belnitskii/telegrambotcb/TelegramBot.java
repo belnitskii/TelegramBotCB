@@ -152,14 +152,14 @@ public class TelegramBot extends Executor {
         executeSafely(getSendMessage(chatId, text));
     }
 
-    private static SendMessage getSendMessage(long chatId, String text) {
+    private SendMessage getSendMessage(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(text);
         return message;
     }
 
-    private static EditMessageText getEditMessageText(Long chatId, Integer messageId) {
+    private EditMessageText getEditMessageText(Long chatId, Integer messageId) {
         EditMessageText editMessage = new EditMessageText();
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
