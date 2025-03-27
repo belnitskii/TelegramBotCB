@@ -11,8 +11,13 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.belnitskii.telegrambotcb.constant.ActionType.*;
+import static com.belnitskii.telegrambotcb.constant.TelegramCommands.*;
 
 @Component
 public class TelegramMenu {
@@ -31,22 +36,25 @@ public class TelegramMenu {
 
     public SetMyCommands createBotCommands() {
         List<BotCommand> commands = List.of(
-                new BotCommand("/get", "Get rate"),
-                new BotCommand("/start", "Start bot"),
-                new BotCommand("/help", "Help"),
-                new BotCommand("/about", "About program")
+                new BotCommand(START.command, START.description),
+                new BotCommand(GET_RATE.command, GET_RATE.description),
+                new BotCommand(ABOUT.command, ABOUT.description),
+                new BotCommand(HELP.command, HELP.description)
         );
-        SetMyCommands setMyCommands = new SetMyCommands(commands, new BotCommandScopeDefault(), null);
-        return setMyCommands;
+        return new SetMyCommands(commands, new BotCommandScopeDefault(), null);
     }
 
     public InlineKeyboardMarkup createTimeFrameMenu(String currency){
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Actual").callbackData(currency + "_ACTUAL").build());
-        row.add(InlineKeyboardButton.builder().text("Week").callbackData(currency + "_WEEK").build());
-        buttons.add(row);
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        row1.add(InlineKeyboardButton.builder().text(ACTUAL.buttonName).callbackData(currency + ACTUAL.callbackSuffix).build());
+        buttons.add(row1);
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        row2.add(InlineKeyboardButton.builder().text(WEEK.buttonName).callbackData(currency + WEEK.callbackSuffix).build());
+        row2.add(InlineKeyboardButton.builder().text(TWO_WEEKS.buttonName).callbackData(currency + TWO_WEEKS.callbackSuffix).build());
+        row2.add(InlineKeyboardButton.builder().text(MONTH.buttonName).callbackData(currency + MONTH.callbackSuffix).build());
+        buttons.add(row2);
         keyboardMarkup.setKeyboard(buttons);
         return keyboardMarkup;
     }
@@ -55,8 +63,8 @@ public class TelegramMenu {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
         List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Text").callbackData(currency + "_TEXT").build());
-        row.add(InlineKeyboardButton.builder().text("Chart").callbackData(currency + "_CHART").build());
+        row.add(InlineKeyboardButton.builder().text(TEXT.buttonName).callbackData(currency + TEXT.callbackSuffix).build());
+        row.add(InlineKeyboardButton.builder().text(CHART.buttonName).callbackData(currency + CHART.callbackSuffix).build());
         buttons.add(row);
         keyboardMarkup.setKeyboard(buttons);
         return keyboardMarkup;
@@ -68,19 +76,19 @@ public class TelegramMenu {
 
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         row1.add(InlineKeyboardButton.builder()
-                .text("USD")
-                .callbackData("USD")
+                .text(String.valueOf(ValutaCharCode.USD))
+                .callbackData(String.valueOf(ValutaCharCode.USD))
                 .build());
         row1.add(InlineKeyboardButton.builder()
-                .text("EUR")
-                .callbackData("EUR")
+                .text(String.valueOf(ValutaCharCode.EUR))
+                .callbackData(String.valueOf(ValutaCharCode.EUR))
                 .build());
         buttons.add(row1);
 
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         row2.add(InlineKeyboardButton.builder()
-                .text("Other Currency")
-                .callbackData("Other Currency")
+                .text(OTHER_CURRENCY.buttonName)
+                .callbackData(OTHER_CURRENCY.callbackSuffix)
                 .build());
         buttons.add(row2);
 
@@ -95,12 +103,12 @@ public class TelegramMenu {
         List<KeyboardRow> keyboardRows = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("Get rate"));
+        row1.add(new KeyboardButton(GET_RATE.buttonName));
         keyboardRows.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("Help"));
-        row2.add(new KeyboardButton("About program"));
+        row2.add(new KeyboardButton(HELP.buttonName));
+        row2.add(new KeyboardButton(ABOUT.buttonName));
         keyboardRows.add(row2);
 
         keyboardMarkup.setKeyboard(keyboardRows);

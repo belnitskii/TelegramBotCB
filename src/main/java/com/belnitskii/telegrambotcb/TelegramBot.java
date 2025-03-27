@@ -13,7 +13,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 import java.io.File;
 import java.util.HashMap;
@@ -97,35 +96,26 @@ public class TelegramBot extends Executor {
             return;
         }
 
-        switch (callbackData) {
-            case "Other Currency":
-                sendCharCodeMenu(chatId, messageId, callbackData);
-                break;
-            default:
-                if (callbackData.contains("_")) {
-                    String[] parts = callbackData.split("_");
-                    String currency = parts[0];
-                    String action = parts[parts.length - 1];
-
-                    switch (action) {
-                        case "ACTUAL":
-                            editMessageWithRate(chatId, messageId, currencyService.getLatestRates(currency));
-                            break;
-                        case "WEEK":
-                            sendSecondTimeFrameMenu(chatId, messageId, callbackData);
-                            break;
-                        case "TEXT":
-                            editMessageWithRate(chatId, messageId, currencyService.getRatesForPeriod(currency, 7));
-                            break;
-                        case "CHART":
-                            File chart = currencyService.getChartRatesFromNow(currency, 7);
-                            sendChart(String.valueOf(chatId), chart);
-                            editMessageWithRate(chatId, messageId, "Chart of " + currency);
-                            break;
-                    }
-                }
-                break;
+        CallbackData parsedData = CallbackData.parse(callbackData);
+        if (parsedData == null) {
+            logger.warn("Неизвестный callback: {}", callbackData);
+            return;
         }
+
+        switch (parsedData.action) {
+            case ACTUAL -> editMessageWithRate(chatId, messageId, currencyService.getLatestRates(parsedData.currency));
+            case WEEK, TWO_WEEKS, MONTH -> sendSecondTimeFrameMenu(chatId, messageId, callbackData);
+            case TEXT ->
+                    editMessageWithRate(chatId, messageId, currencyService.getRatesForPeriod(parsedData.currency, parsedData.getDays()));
+            case CHART -> {
+                File chart = currencyService.getChartRatesFromNow(parsedData.currency, parsedData.getDays());
+                sendChart(String.valueOf(chatId), chart);
+                editMessageWithRate(chatId, messageId, "Chart of " + parsedData.currency);
+            }
+            case OTHER_CURRENCY -> sendCharCodeMenu(chatId, messageId, callbackData);
+            default -> logger.warn("Неизвестное действие: {}", parsedData.action);
+        }
+
     }
 
     private Map<String, Runnable> registerCommands(Update update) {
@@ -151,7 +141,7 @@ public class TelegramBot extends Executor {
     }
 
     private void startBot(long chatId, Update update, String startText) {
-        telegramMenu.createBotCommands();
+        executeSafely(telegramMenu.createBotCommands());
         SendMessage message = getSendMessage(chatId, String.format(startText, update.getMessage().getChat().getFirstName().toString()));
         message.setReplyMarkup(telegramMenu.createReplyKeyboard());
         executeSafely(message);
