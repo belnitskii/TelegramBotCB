@@ -7,29 +7,19 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Основной класс Telegram-бота, обрабатывающий входящие сообщения и команды.
@@ -40,10 +30,11 @@ import java.util.stream.Collectors;
  */
 @Component
 @AllArgsConstructor
-public class TelegramBot extends TelegramLongPollingBot {
-    private static final Logger logger = LoggerFactory.getLogger(TelegramBot.class);
+public class TelegramBot extends Executor {
+    static final Logger logger = LoggerFactory.getLogger(TelegramBot.class);
     private final BotConfig botConfig;
     private final CurrencyService currencyService;
+    private final TelegramMenu telegramMenu;
 
     /**
      * Получает имя бота.
@@ -161,7 +152,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText("Select currency:");
-        message.setReplyMarkup(createCurrencyMenu());
+        message.setReplyMarkup(getCurrencyMenu());
         executeSafely(message);
     }
 
@@ -177,7 +168,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
         editMessage.setText("Choose period for " + currency + ":");
-        editMessage.setReplyMarkup(createCharCodeMenu());
+        editMessage.setReplyMarkup(telegramMenu.createCharCodeMenu());
         executeSafely(editMessage);
     }
 
@@ -193,16 +184,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
         editMessage.setText("Select period for " + currency + ":");
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Actual").callbackData(currency + "_ACTUAL").build());
-        row.add(InlineKeyboardButton.builder().text("Week").callbackData(currency + "_WEEK").build());
-        buttons.add(row);
-
-        keyboardMarkup.setKeyboard(buttons);
-        editMessage.setReplyMarkup(keyboardMarkup);
+        editMessage.setReplyMarkup(telegramMenu.createTimeFrameMenu(currency));
         executeSafely(editMessage);
     }
 
@@ -218,35 +200,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         editMessage.setChatId(chatId.toString());
         editMessage.setMessageId(messageId);
         editMessage.setText("Select display option " + currency.split("_")[0] + ":");
-
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(InlineKeyboardButton.builder().text("Text").callbackData(currency + "_TEXT").build());
-        row.add(InlineKeyboardButton.builder().text("Chart").callbackData(currency + "_CHART").build());
-        buttons.add(row);
-
-        keyboardMarkup.setKeyboard(buttons);
-        editMessage.setReplyMarkup(keyboardMarkup);
+        editMessage.setReplyMarkup(telegramMenu.createSecondTimeFrameMenu(currency));
         executeSafely(editMessage);
-    }
-
-    /**
-     * Создает inline-клавиатуру с доступными валютами.
-     *
-     * @return {@link InlineKeyboardMarkup} с кнопками выбора валюты.
-     */
-    private InlineKeyboardMarkup createCharCodeMenu() {
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = Arrays.stream(ValutaCharCode.values())
-                .map(charCode -> List.of(InlineKeyboardButton.builder()
-                        .text(charCode.name() + " — " + charCode.getName())
-                        .callbackData(charCode.name())
-                        .build()))
-                .collect(Collectors.toList());
-        keyboardMarkup.setKeyboard(buttons);
-        return keyboardMarkup;
     }
 
     /**
@@ -254,30 +209,8 @@ public class TelegramBot extends TelegramLongPollingBot {
      *
      * @return {@link InlineKeyboardMarkup} с кнопками выбора валюты.
      */
-    private InlineKeyboardMarkup createCurrencyMenu() {
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
-        row1.add(InlineKeyboardButton.builder()
-                .text("USD")
-                .callbackData("USD")
-                .build());
-        row1.add(InlineKeyboardButton.builder()
-                .text("EUR")
-                .callbackData("EUR")
-                .build());
-        buttons.add(row1);
-
-        List<InlineKeyboardButton> row2 = new ArrayList<>();
-        row2.add(InlineKeyboardButton.builder()
-                .text("Other Currency")
-                .callbackData("Other Currency")
-                .build());
-        buttons.add(row2);
-
-        keyboardMarkup.setKeyboard(buttons);
-        return keyboardMarkup;
+    private InlineKeyboardMarkup getCurrencyMenu() {
+        return telegramMenu.createCurrencyMenu();
     }
 
     /**
@@ -286,22 +219,7 @@ public class TelegramBot extends TelegramLongPollingBot {
      * @return {@link ReplyKeyboardMarkup} с кнопками для управления ботом.
      */
     private ReplyKeyboardMarkup getReplyKeyboard() {
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(false);
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("Get rate"));
-        keyboardRows.add(row1);
-
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("Help"));
-        row2.add(new KeyboardButton("About program"));
-        keyboardRows.add(row2);
-
-        keyboardMarkup.setKeyboard(keyboardRows);
-        return keyboardMarkup;
+        return telegramMenu.createReplyKeyboard();
     }
 
     /**
@@ -320,21 +238,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         executeSafely(editMessageText);
     }
 
-    /**
-     * Устанавливает команды бота в Telegram.
-     * <p>
-     * Команды включают: старт, помощь и информацию о боте.
-     * </p>
-     */
     private void setBotCommands() {
-        List<BotCommand> commands = List.of(
-                new BotCommand("/get", "Get rate"),
-                new BotCommand("/start", "Start bot"),
-                new BotCommand("/help", "Help"),
-                new BotCommand("/about", "About program")
-        );
-        SetMyCommands setMyCommands = new SetMyCommands(commands, new BotCommandScopeDefault(), null);
-        executeSafely(setMyCommands);
+        executeSafely(telegramMenu.createBotCommands());
     }
 
     /**
@@ -378,21 +283,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         executeSafely(message);
     }
 
-    private void executeSafely(Object method) {
-        try {
-            switch (method) {
-                case BotApiMethod<?> botApiMethod -> execute(botApiMethod);
-                case SendPhoto sendPhoto -> execute(sendPhoto);
-                case SendSticker sendSticker -> execute(sendSticker);
-                case SendDocument sendDocument -> execute(sendDocument);
-                case null, default -> {
-                    assert method != null;
-                    logger.error("Неизвестный тип команды: {}", method.getClass().getSimpleName());
-                }
-            }
-        } catch (TelegramApiException e) {
-            logger.error("Ошибка выполнения команды: {}", method.getClass().getSimpleName(), e);
-        }
-    }
+
 }
 
