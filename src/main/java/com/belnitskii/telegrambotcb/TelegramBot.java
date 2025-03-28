@@ -3,7 +3,6 @@ package com.belnitskii.telegrambotcb;
 import com.belnitskii.telegrambotcb.config.BotConfig;
 import com.belnitskii.telegrambotcb.constant.ValutaCharCode;
 import com.belnitskii.telegrambotcb.service.CurrencyService;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -29,7 +28,6 @@ import static com.belnitskii.telegrambotcb.constant.TelegramCommands.*;
  * </p>
  */
 @Component
-@AllArgsConstructor
 public class TelegramBot extends Executor {
     static final Logger logger = LoggerFactory.getLogger(TelegramBot.class);
     private final BotConfig botConfig;
@@ -46,16 +44,12 @@ public class TelegramBot extends Executor {
         return botConfig.getBotName();
     }
 
-    /**
-     * Получает токен бота.
-     *
-     * @return Токен для авторизации в Telegram API.
-     */
-    @Override
-    public String getBotToken() {
-        return botConfig.getToken();
+    public TelegramBot(BotConfig botConfig, CurrencyService currencyService, TelegramMenu telegramMenu) {
+        super(botConfig.getToken()); // Передаем токен в родительский класс
+        this.botConfig = botConfig;
+        this.currencyService = currencyService;
+        this.telegramMenu = telegramMenu;
     }
-
 
     /**
      * Обрабатывает входящие обновления от Telegram API.
