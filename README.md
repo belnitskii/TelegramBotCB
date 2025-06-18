@@ -1,75 +1,79 @@
 # TelegramBotCB
 
-Этот бот для Telegram позволяет получать актуальный курс валют с сайта Центробанка РФ. Я разработал его для собственного удобства, залил на удаленный сервер и регулярно им пользуюсь 🙂
+This Telegram bot allows you to get the current exchange rate from the Central Bank of Russia.  
+I developed it for my personal convenience, deployed it to a remote server, and use it regularly 🙂
 
-Бот доступен в Telegram по ссылке: [@Central_Bank_Exchange_Rate_bot](https://t.me/Central_Bank_Exchange_Rate_bot)
+The bot is available on Telegram: [@Central_Bank_Exchange_Rate_bot](https://t.me/Central_Bank_Exchange_Rate_bot)
 
-Он умеет:
+It can:
 
-- Показывать текущий курс выбранной валюты из JSON файла.
-- Получать данные за неделю в формате XML и отображать в виде текста
-- Отображать недельный курс в виде графика.
+- Show the current exchange rate of a selected currency from a JSON file.
+- Retrieve weekly data in XML format and display it as text.
+- Display the weekly exchange rate as a chart.
 
-## Стек технологий
+## Tech Stack
 
 - **Java 21**
 - **Spring Boot**
-- **Lombok** (для удобства работы с Java-классами)
-- **Jackson** (десириализация java объектов из JSON и XML)
+- **Lombok** (for convenient Java class handling)
+- **Jackson** (for deserializing Java objects from JSON and XML)
 - **TelegramBots** (Telegram API)
-- **JFreeChart** (построение графика)
-- **SLF4J** (логирование)
-- **JUnit5** (тестирование)
-- **Mockito** (тестирование)
+- **JFreeChart** (for chart generation)
+- **SLF4J** (logging)
+- **JUnit 5** (testing)
+- **Mockito** (testing)
 
-## 📌 **Документация**
-К боту написана документация в формате **Javadoc**.  
-Вы можете сгенерировать её в виде HTML с помощью Maven.
+## 📌 **Documentation**
 
-## Установка и запуск
+The bot is documented using **Javadoc**.  
+You can generate it as HTML using Maven.
 
-### 1. Клонирование репозитория
+## Installation and Running
+
+### 1. Clone the Repository
 
 ```
 git clone https://github.com/belnitskii/TelegramBotCB.git
 ```
 
-### 2. Конфигурация
+### 2. Configuration
 
-Добавьте данные своего бота в application.properties:
+Add your bot credentials to `application.properties`:
 
 ```
 bot.name=your_telegram_bot_name
 bot.token=your_telegram_bot_token
 ```
 
-### 3. Сборка и запуск
+### 3. Build and Run
 
-В корневой папке проекта выполните команды
+From the root project directory, run:
 
 ```
 mvn clean package
 mvn spring-boot:run
 ```
 
-### Генерация документации
 
-Выполните команду:
+### Generate Documentation
+
+Run the command:
 
 ```
 mvn javadoc:javadoc
 ```
 
-Готовая документация появится в каталоге:
+The generated documentation will be located at:
 
 ```
 target/reports/apidocs/index.html
 ```
 
-Откройте index.html в браузере, чтобы просмотреть документацию.
+Open `index.html` in your browser to view the documentation.
 
-## Использование
+## Usage
 
-- Используйте команды кнопки для выбора валюты.
-- Выберите период.
-- Выберите способ отображения (текст или график)
+- Use command buttons to select a currency.
+- Choose a time period.
+- Choose a display format (text or chart).
+
